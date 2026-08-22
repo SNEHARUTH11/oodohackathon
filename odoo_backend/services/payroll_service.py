@@ -15,7 +15,7 @@ from apps.company.models import CompanyConfig, PublicHoliday
 from apps.leaves.models import TimeOffRequest
 from apps.payroll.models import Payslip, SalaryStructure
 from common.utils.dates import company_today, month_date_range
-from services.notification_service import send_email
+from services.notification_service import send_email,notify
 
 logger = logging.getLogger(__name__)
 
@@ -347,6 +347,9 @@ class PayrollService:
             recipient_list=[payslip.employee.email],
             attachments=[(filename, pdf_bytes, "application/pdf")],
         )
+        notify(payslip.employee, "payslip", "Payslip ready",
+               f"Your payslip for {month_label} {payslip.year} is available "
+               f"(net {inr(payslip.net_pay)}).", {"payslip_id": str(payslip.id)})
         logger.info(f"Payslip sent: {payslip} by {actor.login_id}")
         return self.payslip_payload(payslip)
 

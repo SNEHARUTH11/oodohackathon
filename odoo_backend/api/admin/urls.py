@@ -23,11 +23,24 @@ from api.admin.views.payroll import (
 )
 from api.admin.views.dashboard import overview as adm_dash
 from api.admin.views.employees import password_reset
+from api.admin.views.analytics import overview as an_overview
+from api.admin.views.reports import (
+    attendance_monthly, leave_summary, payroll_register,
+)
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
 
 urlpatterns = [
+    # ── Reports & Analytics ───────────────────────────────────────────
+    path("reports/attendance/monthly/", attendance_monthly.AttendanceMonthlyReportView.as_view(), name="report-attendance-monthly"),
+    path("reports/attendance/monthly/export/", attendance_monthly.AttendanceMonthlyExportView.as_view(), name="report-attendance-monthly-export"),
+    path("reports/payroll/register/", payroll_register.PayrollRegisterView.as_view(), name="report-payroll-register"),
+    path("reports/payroll/register/export/", payroll_register.PayrollRegisterExportView.as_view(), name="report-payroll-register-export"),
+    path("reports/leave/summary/", leave_summary.LeaveSummaryView.as_view(), name="report-leave-summary"),
+    path("reports/leave/summary/export/", leave_summary.LeaveSummaryExportView.as_view(), name="report-leave-summary-export"),
+    path("analytics/overview/", an_overview.AnalyticsOverviewView.as_view(), name="analytics-overview"),
+
     # ── Dashboard ─────────────────────────────────────────────────────
     path("dashboard/overview/", adm_dash.AdminDashboardOverviewView.as_view(), name="dashboard-overview"),
     

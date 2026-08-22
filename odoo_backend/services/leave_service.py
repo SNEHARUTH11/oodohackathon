@@ -9,8 +9,8 @@ from apps.attendance.models import Attendance
 from apps.company.models import CompanyConfig, PublicHoliday
 from apps.leaves.models import LeaveBalance, TimeOffRequest
 from common.utils.dates import company_today
-from services.notification_service import send_email
-
+from services.notification_service import send_email,notify
+from services.notification_service import notify_admins
 logger = logging.getLogger(__name__)
 
 
@@ -130,6 +130,10 @@ class LeaveService:
             attachment=data.get("attachment"),
         )
         logger.info(f"Leave applied: {req} by {user.login_id}")
+        notify_admins("leave", "New leave request",
+                      f"{user.full_name} applied for {req.get_leave_type_display()} "
+                      f"({req.start_date} → {req.end_date}, {req.days_count} day(s)).",
+                      {"request_id": str(req.id)})
         return self.request_payload(req, cfg)
 
     def approve(self, actor, req, comment=""):
@@ -175,6 +179,9 @@ class LeaveService:
                      + (f"\n\nComment: {comment}" if comment else "")),
             recipient_list=[req.employee.email],
         )
+        notify(req.employee, "leave", "Leave approved",
+               f"Your {req.get_leave_type_display()} ({req.start_date} → {req.end_date}) "
+               f"was approved.")
         logger.info(f"Leave approved: {req} by {actor.login_id}")
         return self.request_payload(req, cfg)
 
@@ -193,6 +200,9 @@ class LeaveService:
                      + (f"\n\nComment: {comment}" if comment else "")),
             recipient_list=[req.employee.email],
         )
+        notify(req.employee, "leave", "Leave rejected",
+               f"Your {req.get_leave_type_display()} ({req.start_date} → {req.end_date}) "
+               f"was rejected.")
         logger.info(f"Leave rejected: {req} by {actor.login_id}")
         return self.request_payload(req)
 
