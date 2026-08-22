@@ -296,7 +296,7 @@ export const attendanceService = {
         '/admin/attendance/missed-checkouts/',
       )
 
-      return data?.data ?? data
+      return data?.data?.items ?? data?.items ?? data?.data ?? data ?? []
     } catch (error) {
       throw new Error(
         handleApiError(

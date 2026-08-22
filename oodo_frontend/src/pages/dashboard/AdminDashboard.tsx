@@ -3,6 +3,8 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { AppLayout } from '../../components/layout/AppLayout'
 import { Card } from '../../components/ui/Card'
 import { StatCard } from '../../components/dashboard/StatCard'
+import { useEffect, useState } from 'react'
+import { dashboardService } from '../../services/dashboardService'
 
 const attendanceTrend = [
   { name: 'Mon', present: 42, absent: 8 },
@@ -20,7 +22,31 @@ const leaveSeries = [
 ]
 
 export function AdminDashboard() {
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true)
+        const data = await dashboardService.getAdminOverview()
+        setDashboardData(data)
+      } catch (error) {
+        console.error('Failed to load admin dashboard', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadDashboard()
+  }, [])
+
+  const totalEmployees = dashboardData?.counts?.total || 128
+  const presentToday = dashboardData?.counts?.present || 94
+  const leaveRequests = dashboardData?.pending_leave_requests?.count || 12
+  const payrollValue = dashboardData?.payroll?.generated || "4.8L"
+
   return (
+
     <AppLayout title="Dashboard">
       <div className="space-y-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -32,10 +58,10 @@ export function AdminDashboard() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Total employees" value="128" subtitle="Across 5 teams" icon={<Users size={20} />} accent="bg-dayflow-blueSoft" />
-          <StatCard title="Present today" value="94" subtitle="73% attendance" icon={<CalendarCheck2 size={20} />} accent="bg-dayflow-greenSoft" />
-          <StatCard title="Leave requests" value="12" subtitle="3 pending" icon={<BriefcaseBusiness size={20} />} accent="bg-amber-50" />
-          <StatCard title="Payroll" value="₹4.8L" subtitle="This month" icon={<CreditCard size={20} />} accent="bg-violet-50" />
+          <StatCard title="Total employees" value={totalEmployees.toString()} subtitle="Across 5 teams" icon={<Users size={20} />} accent="bg-dayflow-blueSoft" />
+          <StatCard title="Present today" value={presentToday.toString()} subtitle="73% attendance" icon={<CalendarCheck2 size={20} />} accent="bg-dayflow-greenSoft" />
+          <StatCard title="Leave requests" value={leaveRequests.toString()} subtitle="3 pending" icon={<BriefcaseBusiness size={20} />} accent="bg-amber-50" />
+          <StatCard title="Payroll" value={payrollValue.toString()} subtitle="This month" icon={<CreditCard size={20} />} accent="bg-violet-50" />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">

@@ -101,7 +101,7 @@ export const payrollService = {
     }
 
     try {
-      const { data } = await api.patch(
+      const { data } = await api.put(
         `/admin/payroll/salary-structure/update/${employeeId}/`,
         payload,
       )
@@ -283,7 +283,7 @@ export const payrollService = {
 
     try {
       const { data } = await api.get('/employee/payroll/payslip/list/', { params })
-      return data?.data ?? data
+      return data?.data?.items ?? data?.items ?? data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load my payslips'))
     }

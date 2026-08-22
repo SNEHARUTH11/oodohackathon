@@ -50,7 +50,7 @@ export const employeeService = {
   updateEmployee: async (id: string, payload: Record<string, unknown>) => {
     if (USE_MOCK_DATA) return { id, ...payload }
     try {
-      const { data } = await api.put(`/admin/employees/update/${id}/`, payload)
+      const { data } = await api.patch(`/admin/employees/update/${id}/`, payload)
       return data?.data ?? data
     } catch (error) {
       const status = Number((error as { response?: { status?: number } })?.response?.status)
@@ -107,7 +107,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/admin/employees/skill/list/${id}/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load skills'))
     }
@@ -138,7 +138,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/admin/employees/certification/list/${id}/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load certifications'))
     }
@@ -169,7 +169,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/admin/employees/document/list/${id}/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load documents'))
     }
@@ -215,7 +215,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/employee/skill/list/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load my skills'))
     }
@@ -245,7 +245,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/employee/certification/list/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load my certifications'))
     }
@@ -275,7 +275,7 @@ export const employeeService = {
     if (USE_MOCK_DATA) return []
     try {
       const { data } = await api.get(`/employee/document/list/`)
-      return data?.items ?? data?.data ?? data ?? []
+      return normalizeListResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load my documents'))
     }

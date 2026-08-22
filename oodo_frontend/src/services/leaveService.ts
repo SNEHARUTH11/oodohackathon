@@ -112,7 +112,7 @@ export const leaveService = {
     if (USE_MOCK_DATA) return { employee_id: employeeId, ...payload }
 
     try {
-      const { data } = await api.patch(`/admin/timeoff/allocation/update/${employeeId}/`, payload)
+      const { data } = await api.put(`/admin/timeoff/allocation/update/${employeeId}/`, payload)
       return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to update time-off allocation'))

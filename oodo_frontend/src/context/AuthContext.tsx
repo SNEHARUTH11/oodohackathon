@@ -22,21 +22,30 @@ const STORAGE_KEY = 'dayflow-auth'
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return
-
+  const [user, setUserState] = useState<User | null>(() => {
     try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return null
       const value = JSON.parse(raw) as StoredAuthSession
-      setUserState(value.user ?? null)
-      setToken(value.token ?? null)
+      return value.user ?? null
     } catch {
       localStorage.removeItem(STORAGE_KEY)
+      return null
     }
-  }, [])
+  })
+
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return null
+      const value = JSON.parse(raw) as StoredAuthSession
+      return value.token ?? null
+    } catch {
+      return null
+    }
+  })
+
+  // No additional effect required — state is initialized synchronously.
 
   const login = ({ user, token, refreshToken }: { user: User; token?: string | null; refreshToken?: string | null }) => {
     const accessToken = token ?? null
