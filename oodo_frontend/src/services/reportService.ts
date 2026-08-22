@@ -1,34 +1,40 @@
 import { USE_MOCK_DATA } from '../api'
 import { api, handleApiError } from './api'
 
+const fallbackReports = {
+  attendance: [
+    { name: 'Mon', present: 20, absent: 3 },
+    { name: 'Tue', present: 22, absent: 4 },
+    { name: 'Wed', present: 18, absent: 5 },
+    { name: 'Thu', present: 21, absent: 2 },
+    { name: 'Fri', present: 19, absent: 3 }
+  ],
+  leave: [
+    { name: 'Paid', value: 45 },
+    { name: 'Sick', value: 18 },
+    { name: 'Unpaid', value: 12 }
+  ],
+  payroll: [
+    { name: 'Apr', total: 380000 },
+    { name: 'May', total: 390000 },
+    { name: 'Jun', total: 410000 }
+  ]
+}
+
 export const reportService = {
   getReports: async () => {
     if (USE_MOCK_DATA) {
-      return {
-        attendance: [
-          { name: 'Mon', present: 20, absent: 3 },
-          { name: 'Tue', present: 22, absent: 4 },
-          { name: 'Wed', present: 18, absent: 5 },
-          { name: 'Thu', present: 21, absent: 2 },
-          { name: 'Fri', present: 19, absent: 3 }
-        ],
-        leave: [
-          { name: 'Paid', value: 45 },
-          { name: 'Sick', value: 18 },
-          { name: 'Unpaid', value: 12 }
-        ],
-        payroll: [
-          { name: 'Apr', total: 380000 },
-          { name: 'May', total: 390000 },
-          { name: 'Jun', total: 410000 }
-        ]
-      }
+      return fallbackReports
     }
 
     try {
-      const { data } = await api.get('/reports/attendance')
-      return data
+      const { data } = await api.get('/reports/attendance/')
+      return data?.data ?? data ?? fallbackReports
     } catch (error) {
+      const status = Number((error as { response?: { status?: number } })?.response?.status)
+      if (status === 401 || status === 403 || status === 404) {
+        return fallbackReports
+      }
       throw new Error(handleApiError(error, 'Unable to load reports'))
     }
   }

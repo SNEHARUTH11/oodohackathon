@@ -2,6 +2,24 @@ import { api, handleApiError } from './api'
 import { USE_MOCK_DATA } from '../api'
 import { mockUsers } from '../data/mockData'
 
+const normalizeAuthResponse = (payload: any) => {
+  const data = payload?.data ?? payload ?? {}
+  const tokens = data.tokens ?? data.auth?.tokens ?? {}
+  const accessToken = tokens.access ?? tokens.access_token ?? data.access ?? data.access_token ?? data.token ?? null
+  const refreshToken = tokens.refresh ?? tokens.refresh_token ?? data.refresh ?? data.refresh_token ?? data.refreshToken ?? null
+  const user = data.user ?? data.profile ?? null
+
+  if (!user) {
+    throw new Error('Login response missing user data')
+  }
+
+  return {
+    user,
+    token: accessToken,
+    refreshToken
+  }
+}
+
 export const authService = {
   login: async (email: string, password: string) => {
     if (USE_MOCK_DATA) {
@@ -9,12 +27,12 @@ export const authService = {
       if (!user || password !== 'password123') {
         throw new Error('Invalid credentials')
       }
-      return { user, token: 'mock-token' }
+      return { user, token: 'mock-token', refreshToken: 'mock-refresh-token' }
     }
 
     try {
-      const { data } = await api.post('/auth/login', { email, password })
-      return data
+      const { data } = await api.post('/login/', { identifier: email, password })
+      return normalizeAuthResponse(data)
     } catch (error) {
       throw new Error(handleApiError(error, 'Invalid credentials'))
     }
@@ -27,8 +45,8 @@ export const authService = {
     }
 
     try {
-      const { data } = await api.post('/auth/register', payload)
-      return data
+      const { data } = await api.post('/admin/employees/create/', payload)
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to create account'))
     }
@@ -37,7 +55,9 @@ export const authService = {
   logout: async () => {
     if (USE_MOCK_DATA) return true
     try {
-      await api.post('/auth/logout')
+      const raw = localStorage.getItem('dayflow-auth')
+      const refreshToken = raw ? JSON.parse(raw).refreshToken : null
+      await api.post('/logout/', { refresh: refreshToken })
       return true
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to log out'))

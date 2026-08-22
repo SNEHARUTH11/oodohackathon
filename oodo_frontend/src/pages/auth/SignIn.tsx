@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
 import { authService } from '../../services/authService'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import loginIllustration from '../../assets/login-illustration.png'
 
 const signInSchema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -30,7 +30,7 @@ export function SignIn() {
     setError('')
     try {
       const result = await authService.login(values.email, values.password)
-      login({ user: result.user, token: result.token })
+      login({ user: result.user, token: result.token, refreshToken: result.refreshToken })
       showToast('Signed in successfully', 'success')
       navigate('/dashboard')
     } catch (err) {
@@ -39,64 +39,84 @@ export function SignIn() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-dayflow-bg p-6">
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-dayflow-border bg-white shadow-soft lg:grid-cols-2">
-        <div className="relative hidden flex-col justify-between bg-dayflow-navy p-10 text-white lg:flex">
-          <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,_rgba(24,217,139,0.3),_transparent_40%)]" />
-          <div className="relative">
-            <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-3 py-2 backdrop-blur">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-dayflow-green text-sm font-bold text-dayflow-navy">D</div>
-              <div>
-                <div className="text-xl font-semibold">DAYFLOW</div>
-              </div>
-            </div>
-            <h1 className="max-w-sm text-4xl font-semibold tracking-[-0.05em]">Every workday, perfectly aligned.</h1>
-            <p className="mt-4 max-w-md text-base text-slate-300">A premium HR experience designed to help teams track time, simplify payroll, and manage people with clarity.</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#f2f5f4] p-4 md:p-8">
+      <div className="flex w-full max-w-[1240px] overflow-hidden rounded-[30px] border border-[#dfe7eb] bg-[#f4f7f6] shadow-[0_18px_45px_rgba(18,32,41,0.08)]">
+        <div className="hidden w-[56%] flex-col justify-center bg-[#f3f6f5] px-8 py-8 lg:flex">
+          <div className="mb-6 flex items-center gap-3 px-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#dfeef0] text-xl font-bold text-[#0d2030]">D</div>
+            <div className="text-[1.7rem] font-semibold tracking-[-0.06em] text-[#0d2030]">DAYFLOW</div>
           </div>
-          <div className="relative rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-            <div className="flex items-center gap-2 text-dayflow-green">
-              <ShieldCheck size={18} />
-              <span className="text-sm font-medium">Trusted by growing teams</span>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-              <div><div className="text-2xl font-semibold">94%</div><div className="text-xs text-slate-300">Retain</div></div>
-              <div><div className="text-2xl font-semibold">2.1x</div><div className="text-xs text-slate-300">Faster</div></div>
-              <div><div className="text-2xl font-semibold">24/7</div><div className="text-xs text-slate-300">Access</div></div>
-            </div>
+
+          <div className="mb-6 text-left">
+            <h1 className="text-4xl font-semibold tracking-[-0.06em] text-[#0f172a]">Welcome back!</h1>
+            <p className="mt-2 text-base text-[#5d6b73]">Sign in to your Dayflow account</p>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center">
+            <img
+              src={loginIllustration}
+              alt="Person using a laptop at a desk"
+              className="w-full max-w-[760px] object-contain drop-shadow-[0_18px_30px_rgba(15,23,42,0.08)]"
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-center p-6 md:p-10">
-          <div className="w-full max-w-md">
-            <div className="mb-8">
-              <p className="text-sm font-medium uppercase tracking-[0.25em] text-dayflow-green">Welcome back</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-dayflow-text">Sign in to DAYFLOW</h2>
+        <div className="flex w-full items-center justify-center bg-white p-6 md:p-10 lg:w-[44%]">
+          <div className="w-full max-w-[400px]">
+            <div className="mb-8 text-center lg:text-left">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] text-[#0f172a]">Sign In</h2>
+              <p className="mt-2 text-sm text-[#76828a]">Enter your credentials to access your account</p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Input label="Login ID / Email" type="email" placeholder="name@dayflow.io" error={errors.email?.message} {...register('email')} />
-              <div className="relative">
-                <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" error={errors.password?.message} {...register('password')} />
-                <button type="button" aria-label="Toggle password visibility" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[41px] text-dayflow-muted">
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+              <div className="space-y-1">
+                <label htmlFor="email" className="block text-sm font-medium text-[#2f3a40]">Login ID / Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email ID or email"
+                  className="h-12 w-full rounded-xl border border-[#dfe6ea] bg-[#f8fafb] px-3 text-sm text-[#1b2a33] placeholder:text-[#8a94a1] outline-none transition focus:border-[#6fbba9] focus:ring-2 focus:ring-[#cfeae4]"
+                  {...register('email')}
+                />
+                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <div />
-                <Link to="/sign-up" className="font-medium text-dayflow-green hover:text-dayflow-navy">Forgot password?</Link>
+              <div className="space-y-1">
+                <label htmlFor="password" className="block text-sm font-medium text-[#2f3a40]">Password</label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    className="h-12 w-full rounded-xl border border-[#dfe6ea] bg-[#f8fafb] px-3 pr-11 text-sm text-[#1b2a33] placeholder:text-[#8a94a1] outline-none transition focus:border-[#6fbba9] focus:ring-2 focus:ring-[#cfeae4]"
+                    {...register('password')}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#63707b] transition hover:text-[#0f172a]"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+              </div>
+
+              <div className="flex justify-end">
+                <Link to="/sign-up" className="text-sm font-medium text-[#1a8c7a] transition hover:text-[#0d6c62]">Forgot password?</Link>
               </div>
 
               {error && <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
 
-              <Button className="w-full" type="submit" disabled={isSubmitting}>
+              <Button className="h-12 w-full rounded-xl bg-[#0f172a] text-base font-medium text-white transition hover:bg-[#111827]" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-dayflow-muted">
+            <p className="mt-6 text-center text-sm text-[#6b7280]">
               Don’t have an account?{' '}
-              <Link to="/sign-up" className="font-semibold text-dayflow-green">Sign Up</Link>
+              <Link to="/sign-up" className="font-semibold text-[#1a8c7a] hover:text-[#0d6c62]">Sign Up</Link>
             </p>
           </div>
         </div>

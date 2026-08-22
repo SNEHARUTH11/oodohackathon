@@ -6,9 +6,15 @@ interface AuthContextValue {
   token: string | null
   role: Role | null
   isAuthenticated: boolean
-  login: (payload: { user: User; token?: string }) => void
+  login: (payload: { user: User; token?: string | null; refreshToken?: string | null }) => void
   logout: () => void
   setUser: (user: User | null) => void
+}
+
+interface StoredAuthSession {
+  user: User | null
+  token?: string | null
+  refreshToken?: string | null
 }
 
 const STORAGE_KEY = 'dayflow-auth'
@@ -24,18 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!raw) return
 
     try {
-      const value = JSON.parse(raw) as { user: User; token?: string }
-      setUserState(value.user)
+      const value = JSON.parse(raw) as StoredAuthSession
+      setUserState(value.user ?? null)
       setToken(value.token ?? null)
     } catch {
       localStorage.removeItem(STORAGE_KEY)
     }
   }, [])
 
-  const login = ({ user, token }: { user: User; token?: string }) => {
+  const login = ({ user, token, refreshToken }: { user: User; token?: string | null; refreshToken?: string | null }) => {
+    const accessToken = token ?? null
+    const session: StoredAuthSession = {
+      user,
+      token: accessToken,
+      refreshToken: refreshToken ?? null
+    }
+
     setUserState(user)
-    setToken(token ?? 'mock-token')
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, token: token ?? 'mock-token' }))
+    setToken(accessToken)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
   }
 
   const logout = () => {
@@ -48,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     token,
     role: user?.role ?? null,
-    isAuthenticated: Boolean(user),
+    isAuthenticated: Boolean(user && token),
     login,
     logout,
     setUser: setUserState

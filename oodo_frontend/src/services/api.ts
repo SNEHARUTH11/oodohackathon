@@ -1,10 +1,28 @@
 import axios from 'axios'
+import { API_BASE_URL } from '../api'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
+})
+
+api.interceptors.request.use((config) => {
+  const raw = localStorage.getItem('dayflow-auth')
+  if (!raw) return config
+
+  try {
+    const value = JSON.parse(raw) as { token?: string }
+    if (value.token) {
+      config.headers = config.headers ?? {}
+      ;(config.headers as Record<string, string>).Authorization = `Bearer ${value.token}`
+    }
+  } catch {
+    localStorage.removeItem('dayflow-auth')
+  }
+
+  return config
 })
 
 api.interceptors.response.use(
