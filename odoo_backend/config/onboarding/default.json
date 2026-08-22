@@ -12,10 +12,10 @@
   "attendance": {
     "working_weekdays": [1, 2, 3, 4, 5],
     "standard_hours_per_day": 8.0,
-    "half_day_threshold_hours": 8.0,
+    "half_day_threshold_hours": 4.0,
     "break_time_hrs": 1.0,
     "sick_leave_backdate_days": 30
-  },
+},
   "leave": {
     "paid_leave_total": 24,
     "sick_leave_total": 7

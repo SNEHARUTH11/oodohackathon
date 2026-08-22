@@ -1,5 +1,6 @@
 from django.urls import path
 
+from api.employee.views.attendance import check_in, check_out, list as att_list, today
 from api.employee.views.bank import bank_view
 from api.employee.views.certification import (
     certification_create, certification_delete, certification_list,
@@ -13,6 +14,11 @@ from api.employee.views.skill import skill_create, skill_delete, skill_list
 app_name = "employee"
 
 urlpatterns = [
+    path("attendance/today/", today.AttendanceTodayView.as_view(), name="attendance-today"),
+    path("attendance/check-in/", check_in.CheckInView.as_view(), name="attendance-check-in"),
+    path("attendance/check-out/", check_out.CheckOutView.as_view(), name="attendance-check-out"),
+    path("attendance/list/", att_list.AttendanceListView.as_view(), name="attendance-list"),
+
     path("profile/view/", profile_view.MyProfileView.as_view(), name="profile-view"),
     path("profile/update/", profile_update.MyProfileUpdateView.as_view(), name="profile-update"),
     path("profile/picture/upload/", profile_picture_upload.ProfilePictureUploadView.as_view(), name="profile-picture"),

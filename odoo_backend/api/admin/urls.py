@@ -6,12 +6,24 @@ from api.admin.views.employees import (
     employee_create, employee_list, employee_status_toggle, employee_update,
     employee_view, skill_create, skill_delete, skill_list,
 )
+from api.admin.views.attendance import (
+    create as att_create, day_list, missed_checkouts, monthly_list,
+    update as att_update,
+)
 
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
 
 urlpatterns = [
+    # ── Attendance ────────────────────────────────────────────────────
+    path("attendance/day-list/", day_list.AdminDayListView.as_view(), name="attendance-day-list"),
+    path("attendance/monthly-list/", monthly_list.AdminMonthlyListView.as_view(), name="attendance-monthly-list"),
+    path("attendance/missed-checkouts/", missed_checkouts.MissedCheckoutsView.as_view(), name="attendance-missed-checkouts"),
+    path("attendance/create/", att_create.AdminAttendanceCreateView.as_view(), name="attendance-create"),
+    path("attendance/update/<uuid:attendance_id>/", att_update.AdminAttendanceUpdateView.as_view(), name="attendance-update"),
+
+    # ── Employees ─────────────────────────────────────────────────────
     path("employees/create/", employee_create.EmployeeCreateView.as_view(), name="employee-create"),
     path("employees/list/", employee_list.EmployeeListView.as_view(), name="employee-list"),
     path("employees/view/<uuid:employee_id>/", employee_view.EmployeeDetailView.as_view(), name="employee-detail"),

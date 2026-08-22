@@ -35,7 +35,7 @@ class CompanyConfig(models.Model):
     # Attendance
     working_weekdays = models.JSONField(default=default_working_weekdays)  # Mon=1 … Sun=7
     standard_hours_per_day = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("8"))
-    half_day_threshold_hours = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("8"))
+    half_day_threshold_hours = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("4"))
     break_time_hrs = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("1"))
 
     # Leave
