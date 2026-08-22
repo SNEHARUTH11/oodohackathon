@@ -41,6 +41,11 @@ class User(AbstractUser):
     residing_address = models.TextField(blank=True)
     profile_picture = models.ImageField(upload_to="profile_pictures/", null=True, blank=True)
 
+    # Resume tab
+    about = models.TextField(blank=True)
+    what_i_love_about_job = models.TextField(blank=True)
+    interests_hobbies = models.TextField(blank=True)
+
     # Security
     must_change_password = models.BooleanField(
         default=False, help_text="Forced password change on first login."
