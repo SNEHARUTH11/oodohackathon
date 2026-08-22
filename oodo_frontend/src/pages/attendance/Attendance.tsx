@@ -190,9 +190,9 @@ export function Attendance() {
     const fetchAdminDay = async (iso: string) => {
       const items = await attendanceService.adminDayList(iso, search)
       const mapped = (items ?? []).map((it: any, idx: number) => ({
-        id: String(idx),
-        date: it.check_in ? String(it.date) : String(it.date),
-        employee_name: it.employee?.name ?? it.employee?.full_name ?? it.employee?.login_id,
+        id: String(it.employee?.id ?? idx),
+        date: iso,
+        employee_name: it.employee?.name ?? it.employee?.full_name ?? it.employee?.login_id ?? 'Employee',
         employee_id: it.employee?.id ?? undefined,
         check_in: it.check_in ?? null,
         check_out: it.check_out ?? null,
@@ -206,28 +206,29 @@ export function Attendance() {
     const loadAttendance = async () => {
       try {
         setLoading(true)
+
         if (isAdminOrHR && view === 'day') {
           const iso = date.toISOString().slice(0, 10)
           await fetchAdminDay(iso)
-        } else {
-          // employee / month view
-          const month = view === 'month' ? date.getMonth() + 1 : undefined
-          const year = view === 'month' ? date.getFullYear() : undefined
-          const days = await attendanceService.getAttendance(month, year)
-          const mapped = (days ?? []).map((d: any) => ({
-            id: d.id ?? String(d.date),
-            date: typeof d.date === 'string' ? d.date : String(d.date),
-            check_in: d.check_in ?? null,
-            check_out: d.check_out ?? null,
-            work_hours: d.work_hours ?? null,
-            extra_hours: d.extra_hours ?? null,
-            status: d.status ?? null,
-            employee_name: d.employee_name ?? d.employee ?? undefined,
-            employee_id: d.employee_id ?? d.employee_id,
-          }))
-
-          if (!ignore) setAttendance(mapped)
+          return
         }
+
+        const month = view === 'month' ? date.getMonth() + 1 : undefined
+        const year = view === 'month' ? date.getFullYear() : undefined
+        const days = await attendanceService.getAttendance(month, year)
+        const mapped = (days ?? []).map((d: any) => ({
+          id: d.id ?? String(d.date ?? `${d.employee_id ?? 'attendance'}-${Math.random()}`),
+          date: typeof d.date === 'string' ? d.date : String(d.date),
+          check_in: d.check_in ?? null,
+          check_out: d.check_out ?? null,
+          work_hours: d.work_hours ?? null,
+          extra_hours: d.extra_hours ?? null,
+          status: d.status ?? null,
+          employee_name: d.employee_name ?? d.employee ?? d.name ?? undefined,
+          employee_id: d.employee_id ?? d.employee?.id ?? undefined,
+        }))
+
+        if (!ignore) setAttendance(mapped)
       } catch (error) {
         console.error('Failed to load attendance:', error)
         if (!ignore) setAttendance([])
@@ -241,7 +242,7 @@ export function Attendance() {
     return () => {
       ignore = true
     }
-  }, [])
+  }, [date, view, search, isAdminOrHR, isEmployee, currentUser])
 
   // load employees for admin forms
   useEffect(() => {
@@ -310,19 +311,19 @@ export function Attendance() {
      * when that information exists.
      */
     if (isEmployee) {
-      if (currentUser?.employee_id) {
+      if (currentUser?.employee_id && result.some((entry) => entry.employee_id != null)) {
         result = result.filter(
           (entry) =>
             String(entry.employee_id) ===
             String(currentUser.employee_id),
         )
-      } else if (currentUser?.id) {
+      } else if (currentUser?.id && result.some((entry) => entry.employee_id != null)) {
         result = result.filter(
           (entry) =>
             String(entry.employee_id) ===
             String(currentUser.id),
         )
-      } else if (currentUser?.name) {
+      } else if (currentUser?.name && result.some((entry) => entry.employee_name || entry.employee)) {
         result = result.filter(
           (entry) =>
             entry.employee_name === currentUser.name ||
