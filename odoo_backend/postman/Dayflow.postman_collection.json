@@ -1,0 +1,133 @@
+{
+  "info": {
+    "_postman_id": "dayflow-hrms-api",
+    "name": "Dayflow HRMS API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }] },
+  "variable": [
+    { "key": "admin_token", "value": "" }, { "key": "admin_refresh", "value": "" },
+    { "key": "emp_token", "value": "" }, { "key": "emp_refresh", "value": "" },
+    { "key": "employee_id", "value": "" }, { "key": "attendance_id", "value": "" },
+    { "key": "request_id", "value": "" }, { "key": "payslip_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Login — Admin",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const d = pm.response.json().data;",
+            "pm.collectionVariables.set('admin_token', d.tokens.access);",
+            "pm.collectionVariables.set('admin_refresh', d.tokens.refresh);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"identifier\": \"{{admin_identifier}}\", \"password\": \"{{admin_password}}\"}" }, "url": "{{base_url}}/auth/login/" }
+        },
+        {
+          "name": "Login — Employee",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const d = pm.response.json().data;",
+            "pm.collectionVariables.set('emp_token', d.tokens.access);",
+            "pm.collectionVariables.set('emp_refresh', d.tokens.refresh);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"identifier\": \"{{emp_identifier}}\", \"password\": \"{{emp_password}}\"}" }, "url": "{{base_url}}/auth/login/" }
+        },
+        { "name": "Refresh Token", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"refresh\": \"{{emp_refresh}}\"}" }, "url": "{{base_url}}/auth/refresh/" } },
+        { "name": "Change Password", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{emp_token}}" }], "body": { "mode": "raw", "raw": "{\"current_password\": \"OldPass@1\", \"new_password\": \"NewPass@1\", \"confirm_password\": \"NewPass@1\"}" }, "url": "{{base_url}}/auth/change-password/" } },
+        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{emp_token}}" }], "body": { "mode": "raw", "raw": "{\"refresh\": \"{{emp_refresh}}\"}" }, "url": "{{base_url}}/auth/logout/" } }
+      ]
+    },
+    {
+      "name": "Employee",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{emp_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Dashboard Overview", "request": { "method": "GET", "url": "{{base_url}}/employee/dashboard/overview/" } },
+        { "name": "Attendance — Today State", "request": { "method": "GET", "url": "{{base_url}}/employee/attendance/today/" } },
+        { "name": "Attendance — Check In", "request": { "method": "POST", "url": "{{base_url}}/employee/attendance/check-in/" } },
+        { "name": "Attendance — Check Out", "request": { "method": "POST", "url": "{{base_url}}/employee/attendance/check-out/" } },
+        { "name": "Attendance — My Month", "request": { "method": "GET", "url": "{{base_url}}/employee/attendance/list/?month=11&year=2025" } },
+        { "name": "Profile — View", "request": { "method": "GET", "url": "{{base_url}}/employee/profile/view/" } },
+        { "name": "Profile — Update (limited fields)", "request": { "method": "PATCH", "body": { "mode": "raw", "raw": "{\"phone\": \"9876500000\", \"residing_address\": \"Ahmedabad\"}" }, "url": "{{base_url}}/employee/profile/update/" } },
+        { "name": "Profile — Picture Upload", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "image", "type": "file", "src": [] }] }, "url": "{{base_url}}/employee/profile/picture/upload/" } },
+        { "name": "Profile — Public View", "request": { "method": "GET", "url": "{{base_url}}/employee/profile/public-view/?employee_id={{employee_id}}" } },
+        { "name": "Bank — View (read-only)", "request": { "method": "GET", "url": "{{base_url}}/employee/bank/view/" } },
+        { "name": "Skills — List", "request": { "method": "GET", "url": "{{base_url}}/employee/skill/list/" } },
+        { "name": "Skills — Create", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"name\": \"Django\"}" }, "url": "{{base_url}}/employee/skill/create/" } },
+        { "name": "Certifications — List", "request": { "method": "GET", "url": "{{base_url}}/employee/certification/list/" } },
+        { "name": "Documents — List", "request": { "method": "GET", "url": "{{base_url}}/employee/document/list/" } },
+        { "name": "Time Off — Calendar", "request": { "method": "GET", "url": "{{base_url}}/employee/timeoff/calendar/?year=2025" } },
+        { "name": "Time Off — Balances", "request": { "method": "GET", "url": "{{base_url}}/employee/timeoff/balance/view/" } },
+        { "name": "Time Off — Apply", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"leave_type\": \"paid\", \"start_date\": \"2026-01-05\", \"end_date\": \"2026-01-06\", \"remarks\": \"Trip\"}" }, "url": "{{base_url}}/employee/timeoff/request/create/" } },
+        { "name": "Time Off — My Requests", "request": { "method": "GET", "url": "{{base_url}}/employee/timeoff/request/list/" } },
+        { "name": "Time Off — Cancel (pending only)", "request": { "method": "POST", "url": "{{base_url}}/employee/timeoff/request/cancel/{{request_id}}/" } },
+        { "name": "Payslips — List (sent only)", "request": { "method": "GET", "url": "{{base_url}}/employee/payroll/payslip/list/" } },
+        { "name": "Payslip — View", "request": { "method": "GET", "url": "{{base_url}}/employee/payroll/payslip/view/{{payslip_id}}/" } },
+        { "name": "Payslip — Download PDF", "request": { "method": "GET", "url": "{{base_url}}/employee/payroll/payslip/download/{{payslip_id}}/" } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "Dashboard Overview", "request": { "method": "GET", "url": "{{base_url}}/admin/dashboard/overview/" } },
+        {
+          "name": "Employees — Create",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const d = pm.response.json().data;",
+            "pm.collectionVariables.set('employee_id', d.id);",
+            "console.log('Temp password (shown once):', d.temp_password);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john.doe@oaloo.in\", \"department\": \"Engineering\", \"job_position\": \"Software Engineer\", \"date_of_joining\": \"2025-11-01\"}" }, "url": "{{base_url}}/admin/employees/create/" }
+        },
+        { "name": "Employees — List", "request": { "method": "GET", "url": "{{base_url}}/admin/employees/list/?search=" } },
+        { "name": "Employee — View", "request": { "method": "GET", "url": "{{base_url}}/admin/employees/view/{{employee_id}}/" } },
+        { "name": "Employee — Update (all fields)", "request": { "method": "PATCH", "body": { "mode": "raw", "raw": "{\"department\": \"Engineering\", \"location\": \"Pune\"}" }, "url": "{{base_url}}/admin/employees/update/{{employee_id}}/" } },
+        { "name": "Employee — Status Toggle", "request": { "method": "POST", "url": "{{base_url}}/admin/employees/status-toggle/{{employee_id}}/" } },
+        { "name": "Bank — View", "request": { "method": "GET", "url": "{{base_url}}/admin/employees/bank/view/{{employee_id}}/" } },
+        { "name": "Bank — Update", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"account_number\": \"123456789012\", \"bank_name\": \"HDFC Bank\", \"ifsc_code\": \"HDFC0001234\"}" }, "url": "{{base_url}}/admin/employees/bank/update/{{employee_id}}/" } },
+        { "name": "Documents — List", "request": { "method": "GET", "url": "{{base_url}}/admin/employees/document/list/{{employee_id}}/" } },
+        { "name": "Document — Upload", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "doc_type", "value": "offer_letter", "type": "text" }, { "key": "title", "value": "Offer Letter", "type": "text" }, { "key": "file", "type": "file", "src": [] }] }, "url": "{{base_url}}/admin/employees/document/upload/{{employee_id}}/" } },
+        { "name": "Attendance — Day List (all employees)", "request": { "method": "GET", "url": "{{base_url}}/admin/attendance/day-list/" } },
+        { "name": "Attendance — Monthly (per employee)", "request": { "method": "GET", "url": "{{base_url}}/admin/attendance/monthly-list/?employee_id={{employee_id}}" } },
+        { "name": "Attendance — Missed Checkouts", "request": { "method": "GET", "url": "{{base_url}}/admin/attendance/missed-checkouts/" } },
+        {
+          "name": "Attendance — Create (manual/backfill)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const d = pm.response.json().data;",
+            "pm.collectionVariables.set('attendance_id', d.id);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"employee_id\": \"{{employee_id}}\", \"date\": \"2025-11-20\", \"check_in\": \"2025-11-20T10:00:00\"}" }, "url": "{{base_url}}/admin/attendance/create/" }
+        },
+        { "name": "Attendance — Update (fix session/status)", "request": { "method": "PATCH", "body": { "mode": "raw", "raw": "{\"session_id\": \"<SESSION_UUID>\", \"check_out\": \"2025-11-20T19:00:00\"}" }, "url": "{{base_url}}/admin/attendance/update/{{attendance_id}}/" } },
+        { "name": "Time Off — All Requests", "request": { "method": "GET", "url": "{{base_url}}/admin/timeoff/request/list/?status=pending" } },
+        {
+          "name": "Time Off — Approve",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const id = pm.response.json().data.id;",
+            "if (id) pm.collectionVariables.set('request_id', id);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"comment\": \"Approved\"}" }, "url": "{{base_url}}/admin/timeoff/request/approve/{{request_id}}/" }
+        },
+        { "name": "Time Off — Reject", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"comment\": \"Not enough notice\"}" }, "url": "{{base_url}}/admin/timeoff/request/reject/{{request_id}}/" } },
+        { "name": "Allocations — List", "request": { "method": "GET", "url": "{{base_url}}/admin/timeoff/allocation/list/" } },
+        { "name": "Allocation — Update", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"year\": 2025, \"paid_leave_total\": 26}" }, "url": "{{base_url}}/admin/timeoff/allocation/update/{{employee_id}}/" } },
+        { "name": "Payroll — List (board)", "request": { "method": "GET", "url": "{{base_url}}/admin/payroll/list/?month=11&year=2025" } },
+        { "name": "Salary Structure — View", "request": { "method": "GET", "url": "{{base_url}}/admin/payroll/salary-structure/view/{{employee_id}}/" } },
+        { "name": "Salary Structure — Update (auto-recalc)", "request": { "method": "PUT", "body": { "mode": "raw", "raw": "{\"monthly_wage\": 50000}" }, "url": "{{base_url}}/admin/payroll/salary-structure/update/{{employee_id}}/" } },
+        {
+          "name": "Payslips — Generate (bulk drafts)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const r = pm.response.json().data.results.find(x => x.payslip_id);",
+            "if (r) pm.collectionVariables.set('payslip_id', r.payslip_id);" ] } }],
+          "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"month\": 11, \"year\": 2025}" }, "url": "{{base_url}}/admin/payroll/payslip/generate/" }
+        },
+        { "name": "Payslip — View (with flags)", "request": { "method": "GET", "url": "{{base_url}}/admin/payroll/payslip/view/{{payslip_id}}/" } },
+        { "name": "Payslip — Regenerate (draft only)", "request": { "method": "POST", "url": "{{base_url}}/admin/payroll/payslip/regenerate/{{payslip_id}}/" } },
+        { "name": "Payslips — Send (lock + email)", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"month\": 11, \"year\": 2025}" }, "url": "{{base_url}}/admin/payroll/payslip/send/" } },
+        { "name": "Payslip — Download PDF (admin preview)", "request": { "method": "GET", "url": "{{base_url}}/admin/payroll/payslip/download/{{payslip_id}}/" } },
+        { "name": "Settings — Company View", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/company/view/" } },
+        { "name": "Settings — Company Update", "request": { "method": "PATCH", "body": { "mode": "raw", "raw": "{\"pf_rate_percent\": 12, \"professional_tax\": 200}" }, "url": "{{base_url}}/admin/settings/company/update/" } },
+        { "name": "Holidays — List", "request": { "method": "GET", "url": "{{base_url}}/admin/settings/holiday/list/?year=2026" } },
+        { "name": "Holiday — Create", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"name\": \"Founders Day\", \"date\": \"2026-06-01\"}" }, "url": "{{base_url}}/admin/settings/holiday/create/" } },
+        { "name": "Holiday — Update", "request": { "method": "PATCH", "body": { "mode": "raw", "raw": "{\"name\": \"Founders Day (Renamed)\"}" }, "url": "{{base_url}}/admin/settings/holiday/update/<holiday_id>/" } },
+        { "name": "Holiday — Delete", "request": { "method": "DELETE", "url": "{{base_url}}/admin/settings/holiday/delete/<holiday_id>/" } }
+      ]
+    }
+  ]
+}

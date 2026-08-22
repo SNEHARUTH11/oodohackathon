@@ -14,9 +14,13 @@ from api.employee.views.timeoff import (
     balance_view, calendar, request_cancel, request_create, request_list,
 )
 from api.employee.views.payroll import payslip_download, payslip_list, payslip_view
+from api.employee.views.dashboard import overview as emp_dash
 app_name = "employee"
 
 urlpatterns = [
+    # ── Dashboard ─────────────────────────────────────────────────────
+    path("dashboard/overview/", emp_dash.EmployeeDashboardOverviewView.as_view(), name="dashboard-overview"),
+    
     # ── Payroll (read-only) ───────────────────────────────────────────
     path("payroll/payslip/list/", payslip_list.MyPayslipListView.as_view(), name="my-payslip-list"),
     path("payroll/payslip/view/<uuid:payslip_id>/", payslip_view.MyPayslipDetailView.as_view(), name="my-payslip-view"),

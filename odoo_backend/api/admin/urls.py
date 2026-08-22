@@ -21,11 +21,15 @@ from api.admin.views.payroll import (
     list as pr_list, payslip_download, payslip_generate, payslip_regenerate,
     payslip_send, payslip_view, structure_update, structure_view,
 )
+from api.admin.views.dashboard import overview as adm_dash
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
 
 urlpatterns = [
+    # ── Dashboard ─────────────────────────────────────────────────────
+    path("dashboard/overview/", adm_dash.AdminDashboardOverviewView.as_view(), name="dashboard-overview"),
+    
     # ── Payroll ───────────────────────────────────────────────────────
     path("payroll/list/", pr_list.PayrollListView.as_view(), name="payroll-list"),
     path("payroll/salary-structure/view/<uuid:employee_id>/", structure_view.SalaryStructureView.as_view(), name="payroll-structure-view"),
