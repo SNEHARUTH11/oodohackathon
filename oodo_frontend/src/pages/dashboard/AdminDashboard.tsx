@@ -1,9 +1,13 @@
-
 import {
+  ArrowLeft,
   ArrowRight,
+  CalendarDays,
   CheckCircle2,
+  Mail,
+  Phone,
   Plus,
   Search,
+  UserRound,
   UsersRound,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -22,9 +26,12 @@ type Employee = {
   avatar: string
   status: AttendanceStatus
   email: string
+  phone?: string
+  joiningDate?: string
+  employmentType?: string
 }
 
-const employees: Employee[] = [
+const initialEmployees: Employee[] = [
   {
     id: 'EMP-001',
     name: 'Sneha Ruth',
@@ -161,10 +168,50 @@ const statusStyles: Record<
   },
 }
 
+type EmployeeForm = {
+  firstName: string
+  lastName: string
+  employeeId: string
+  email: string
+  phone: string
+  department: string
+  role: string
+  joiningDate: string
+  employmentType: string
+  status: AttendanceStatus
+  avatar: string
+}
+
+const emptyForm: EmployeeForm = {
+  firstName: '',
+  lastName: '',
+  employeeId: '',
+  email: '',
+  phone: '',
+  department: '',
+  role: '',
+  joiningDate: '',
+  employmentType: 'Full Time',
+  status: 'offline',
+  avatar: '',
+}
+
 export function AdminDashboard() {
+  const [employees, setEmployees] =
+    useState<Employee[]>(initialEmployees)
+
   const [searchTerm, setSearchTerm] = useState('')
+
   const [selectedEmployee, setSelectedEmployee] =
     useState<Employee | null>(null)
+
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] =
+    useState(false)
+
+  const [form, setForm] =
+    useState<EmployeeForm>(emptyForm)
+
+  const [formError, setFormError] = useState('')
 
   const filteredEmployees = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
@@ -181,35 +228,855 @@ export function AdminDashboard() {
         employee.employeeId.toLowerCase().includes(search)
       )
     })
-  }, [searchTerm])
+  }, [searchTerm, employees])
 
   const handleEmployeeClick = (employee: Employee) => {
     setSelectedEmployee(employee)
   }
 
+  const handleOpenAddEmployee = () => {
+    setForm(emptyForm)
+    setFormError('')
+    setIsAddEmployeeOpen(true)
+    setSelectedEmployee(null)
+  }
+
+  const handleCloseAddEmployee = () => {
+    setIsAddEmployeeOpen(false)
+    setForm(emptyForm)
+    setFormError('')
+  }
+
+  const handleFormChange = (
+    field: keyof EmployeeForm,
+    value: string,
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }))
+
+    if (formError) {
+      setFormError('')
+    }
+  }
+
+  const handleCreateEmployee = () => {
+    if (
+      !form.firstName.trim() ||
+      !form.lastName.trim() ||
+      !form.employeeId.trim() ||
+      !form.email.trim() ||
+      !form.department.trim() ||
+      !form.role.trim()
+    ) {
+      setFormError(
+        'Please fill in all required fields marked with *.',
+      )
+      return
+    }
+
+    const employee: Employee = {
+      id: form.employeeId.trim(),
+      name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+      employeeId: form.employeeId.trim(),
+      department: form.department.trim(),
+      role: form.role.trim(),
+      avatar:
+        form.avatar.trim() ||
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=85',
+      status: form.status,
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      joiningDate: form.joiningDate,
+      employmentType: form.employmentType,
+    }
+
+    setEmployees((previous) => [employee, ...previous])
+
+    setSelectedEmployee(employee)
+    setIsAddEmployeeOpen(false)
+    setForm(emptyForm)
+    setFormError('')
+  }
+
+  /*
+   * ============================================================
+   * ADD EMPLOYEE PAGE
+   * ============================================================
+   */
+
+  if (isAddEmployeeOpen) {
+    return (
+      <AppLayout title="Add Employee">
+        <div className="min-h-full bg-[#FCFDFE]">
+
+          {/* Header */}
+
+          <div className="mb-6 flex items-center gap-4">
+
+            <button
+              type="button"
+              onClick={handleCloseAddEmployee}
+              className="
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-[#E4E7EC]
+                bg-white
+                text-[#475467]
+                transition
+                hover:bg-[#F8FAFC]
+                hover:text-[#172033]
+              "
+            >
+              <ArrowLeft size={19} />
+            </button>
+
+            <div>
+              <h1
+                className="
+                  text-[30px]
+                  font-bold
+                  tracking-[-0.04em]
+                  text-[#102044]
+                "
+              >
+                Add Employee
+              </h1>
+
+              <p className="mt-1 text-[15px] text-[#667085]">
+                Create a new employee profile
+              </p>
+            </div>
+
+          </div>
+
+          {/* Error */}
+
+          {formError && (
+            <div
+              className="
+                mb-5
+                rounded-xl
+                border
+                border-[#FECACA]
+                bg-[#FEF2F2]
+                px-4
+                py-3
+                text-sm
+                font-medium
+                text-[#B42318]
+              "
+            >
+              {formError}
+            </div>
+          )}
+
+          <div className="space-y-5">
+
+            {/* =================================================
+                PERSONAL INFORMATION
+            ================================================== */}
+
+            <Card>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  border-b
+                  border-[#EEF1F5]
+                  px-6
+                  py-5
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-[#EAF9F3]
+                    text-[#18B978]
+                  "
+                >
+                  <UserRound size={20} />
+                </div>
+
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#172033]">
+                    Personal Information
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-[#667085]">
+                    Basic information about the employee
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="grid gap-5 p-6 md:grid-cols-2">
+
+                <FormField
+                  label="First Name"
+                  required
+                >
+                  <input
+                    value={form.firstName}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'firstName',
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter first name"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField
+                  label="Last Name"
+                  required
+                >
+                  <input
+                    value={form.lastName}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'lastName',
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter last name"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField
+                  label="Employee ID"
+                  required
+                >
+                  <input
+                    value={form.employeeId}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'employeeId',
+                        event.target.value,
+                      )
+                    }
+                    placeholder="e.g. EMP-010"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Profile Image URL">
+                  <input
+                    value={form.avatar}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'avatar',
+                        event.target.value,
+                      )
+                    }
+                    placeholder="https://..."
+                    className={inputClass}
+                  />
+                </FormField>
+
+              </div>
+
+            </Card>
+
+            {/* =================================================
+                CONTACT INFORMATION
+            ================================================== */}
+
+            <Card>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  border-b
+                  border-[#EEF1F5]
+                  px-6
+                  py-5
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-[#EEF6FF]
+                    text-[#1687E8]
+                  "
+                >
+                  <Mail size={20} />
+                </div>
+
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#172033]">
+                    Contact Information
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-[#667085]">
+                    Employee contact details
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="grid gap-5 p-6 md:grid-cols-2">
+
+                <FormField
+                  label="Email Address"
+                  required
+                >
+                  <div className="relative">
+                    <Mail
+                      size={17}
+                      className="
+                        absolute
+                        left-3.5
+                        top-1/2
+                        -translate-y-1/2
+                        text-[#98A2B3]
+                      "
+                    />
+
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(event) =>
+                        handleFormChange(
+                          'email',
+                          event.target.value,
+                        )
+                      }
+                      placeholder="employee@dayflow.com"
+                      className={`${inputClass} pl-10`}
+                    />
+                  </div>
+                </FormField>
+
+                <FormField label="Phone Number">
+                  <div className="relative">
+                    <Phone
+                      size={17}
+                      className="
+                        absolute
+                        left-3.5
+                        top-1/2
+                        -translate-y-1/2
+                        text-[#98A2B3]
+                      "
+                    />
+
+                    <input
+                      type="tel"
+                      value={form.phone}
+                      onChange={(event) =>
+                        handleFormChange(
+                          'phone',
+                          event.target.value,
+                        )
+                      }
+                      placeholder="+91 98765 43210"
+                      className={`${inputClass} pl-10`}
+                    />
+                  </div>
+                </FormField>
+
+              </div>
+
+            </Card>
+
+            {/* =================================================
+                WORK INFORMATION
+            ================================================== */}
+
+            <Card>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  border-b
+                  border-[#EEF1F5]
+                  px-6
+                  py-5
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-[#EAF9F3]
+                    text-[#18B978]
+                  "
+                >
+                  <UsersRound size={20} />
+                </div>
+
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#172033]">
+                    Work Information
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-[#667085]">
+                    Department and role information
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="grid gap-5 p-6 md:grid-cols-2">
+
+                <FormField
+                  label="Department"
+                  required
+                >
+                  <select
+                    value={form.department}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'department',
+                        event.target.value,
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Select department
+                    </option>
+                    <option value="Design">
+                      Design
+                    </option>
+                    <option value="Engineering">
+                      Engineering
+                    </option>
+                    <option value="Finance">
+                      Finance
+                    </option>
+                    <option value="Human Resources">
+                      Human Resources
+                    </option>
+                    <option value="Marketing">
+                      Marketing
+                    </option>
+                    <option value="Product">
+                      Product
+                    </option>
+                    <option value="Sales">
+                      Sales
+                    </option>
+                  </select>
+                </FormField>
+
+                <FormField
+                  label="Role"
+                  required
+                >
+                  <input
+                    value={form.role}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'role',
+                        event.target.value,
+                      )
+                    }
+                    placeholder="e.g. Software Engineer"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Employment Type">
+                  <select
+                    value={form.employmentType}
+                    onChange={(event) =>
+                      handleFormChange(
+                        'employmentType',
+                        event.target.value,
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="Full Time">
+                      Full Time
+                    </option>
+                    <option value="Part Time">
+                      Part Time
+                    </option>
+                    <option value="Contract">
+                      Contract
+                    </option>
+                    <option value="Intern">
+                      Intern
+                    </option>
+                  </select>
+                </FormField>
+
+                <FormField label="Joining Date">
+                  <div className="relative">
+                    <CalendarDays
+                      size={17}
+                      className="
+                        absolute
+                        left-3.5
+                        top-1/2
+                        -translate-y-1/2
+                        text-[#98A2B3]
+                      "
+                    />
+
+                    <input
+                      type="date"
+                      value={form.joiningDate}
+                      onChange={(event) =>
+                        handleFormChange(
+                          'joiningDate',
+                          event.target.value,
+                        )
+                      }
+                      className={`${inputClass} pl-10`}
+                    />
+                  </div>
+                </FormField>
+
+              </div>
+
+            </Card>
+
+            {/* =================================================
+                EMPLOYMENT STATUS
+            ================================================== */}
+
+            <Card>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                  border-b
+                  border-[#EEF1F5]
+                  px-6
+                  py-5
+                "
+              >
+
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-[#FFF7DE]
+                    text-[#B77900]
+                  "
+                >
+                  <CheckCircle2 size={20} />
+                </div>
+
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#172033]">
+                    Employment Status
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-[#667085]">
+                    Set the employee's current attendance status
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="p-6">
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                  {(
+                    [
+                      'present',
+                      'away',
+                      'leave',
+                      'offline',
+                    ] as AttendanceStatus[]
+                  ).map((status) => {
+                    const style = statusStyles[status]
+
+                    const active =
+                      form.status === status
+
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() =>
+                          handleFormChange(
+                            'status',
+                            status,
+                          )
+                        }
+                        className={`
+                          flex
+                          items-center
+                          gap-3
+                          rounded-xl
+                          border
+                          px-4
+                          py-3.5
+                          text-left
+                          transition
+                          ${
+                            active
+                              ? 'border-[#18B978] bg-[#F0FBF6]'
+                              : 'border-[#E4E7EC] bg-white hover:bg-[#F8FAFC]'
+                          }
+                        `}
+                      >
+                        <span
+                          className={`
+                            h-2.5
+                            w-2.5
+                            rounded-full
+                            ${style.dot}
+                          `}
+                        />
+
+                        <span
+                          className={`
+                            text-sm
+                            font-semibold
+                            ${
+                              active
+                                ? style.text
+                                : 'text-[#475467]'
+                            }
+                          `}
+                        >
+                          {style.label}
+                        </span>
+
+                      </button>
+                    )
+                  })}
+
+                </div>
+
+              </div>
+
+            </Card>
+
+            {/* =================================================
+                ACTIONS
+            ================================================== */}
+
+            <div
+              className="
+                flex
+                flex-col-reverse
+                gap-3
+                pb-8
+                sm:flex-row
+                sm:justify-end
+              "
+            >
+
+              <button
+                type="button"
+                onClick={handleCloseAddEmployee}
+                className="
+                  h-11
+                  rounded-xl
+                  border
+                  border-[#D0D5DD]
+                  bg-white
+                  px-6
+                  text-sm
+                  font-semibold
+                  text-[#344054]
+                  transition
+                  hover:bg-[#F8FAFC]
+                "
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCreateEmployee}
+                className="
+                  flex
+                  h-11
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-[#18B978]
+                  px-6
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-sm
+                  transition
+                  hover:bg-[#119B65]
+                  hover:shadow-md
+                "
+              >
+                <Plus size={18} />
+                Create Employee
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  /*
+   * ============================================================
+   * EMPLOYEE DIRECTORY PAGE
+   * ============================================================
+   */
+
   return (
     <AppLayout title="Employees">
+
       <div className="min-h-full bg-[#FCFDFE]">
 
         {/* =====================================================
             PAGE HEADER
         ====================================================== */}
 
-        <div className="mb-5">
-          <h1
-            className="
-              text-[30px]
-              font-bold
-              tracking-[-0.04em]
-              text-[#102044]
-            "
-          >
-            Employees
-          </h1>
+        <div
+          className="
+            mb-5
+            flex
+            flex-col
+            gap-4
+            lg:flex-row
+            lg:items-center
+            lg:justify-between
+          "
+        >
 
-          <p className="mt-1 text-[15px] text-[#667085]">
-            Manage employee profiles and attendance
-          </p>
+          <div>
+
+            <h1
+              className="
+                text-[30px]
+                font-bold
+                tracking-[-0.04em]
+                text-[#102044]
+              "
+            >
+              Employees
+            </h1>
+
+            <p className="mt-1 text-[15px] text-[#667085]">
+              Manage employee profiles and attendance
+            </p>
+
+          </div>
+
+          {/* Search + Add Employee */}
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+
+            <div className="relative">
+
+              <Search
+                size={18}
+                className="
+                  absolute
+                  left-3.5
+                  top-1/2
+                  -translate-y-1/2
+                  text-[#98A2B3]
+                "
+              />
+
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) =>
+                  setSearchTerm(event.target.value)
+                }
+                placeholder="Search employees"
+                className="
+                  h-11
+                  w-full
+                  rounded-xl
+                  border
+                  border-[#DDE3EA]
+                  bg-white
+                  pl-10
+                  pr-4
+                  text-sm
+                  text-[#172033]
+                  outline-none
+                  transition
+                  placeholder:text-[#98A2B3]
+                  focus:border-[#18B978]
+                  focus:ring-4
+                  focus:ring-[#18B978]/10
+                  sm:w-[250px]
+                "
+              />
+
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddEmployee}
+              className="
+                flex
+                h-11
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-[#18B978]
+                px-5
+                text-sm
+                font-semibold
+                text-white
+                shadow-sm
+                transition
+                hover:bg-[#119B65]
+                hover:shadow-md
+              "
+            >
+              <Plus size={18} />
+              Add Employee
+            </button>
+
+          </div>
+
         </div>
 
         {/* =====================================================
@@ -265,34 +1132,6 @@ export function AdminDashboard() {
 
             </div>
 
-            {/* Add Employee */}
-
-            <button
-              type="button"
-              className="
-                flex
-                h-10
-                items-center
-                justify-center
-                gap-2
-                self-start
-                rounded-lg
-                bg-[#18B978]
-                px-4
-                text-sm
-                font-semibold
-                text-white
-                shadow-sm
-                transition
-                hover:bg-[#119B65]
-                hover:shadow-md
-                sm:self-auto
-              "
-            >
-              <Plus size={18} />
-              Add Employee
-            </button>
-
           </div>
 
           {/* =================================================
@@ -313,7 +1152,8 @@ export function AdminDashboard() {
 
               {filteredEmployees.map((employee) => {
 
-                const status = statusStyles[employee.status]
+                const status =
+                  statusStyles[employee.status]
 
                 const isSelected =
                   selectedEmployee?.id === employee.id
@@ -347,8 +1187,6 @@ export function AdminDashboard() {
 
                     <div className="p-5">
 
-                      {/* Avatar + status */}
-
                       <div className="flex items-start justify-between">
 
                         <div className="relative">
@@ -360,8 +1198,8 @@ export function AdminDashboard() {
                               h-[72px]
                               w-[72px]
                               rounded-full
-                              object-cover
                               bg-[#F2F4F7]
+                              object-cover
                               ring-4
                               ring-[#F8FAFC]
                             "
@@ -383,8 +1221,6 @@ export function AdminDashboard() {
 
                         </div>
 
-                        {/* Status indicator */}
-
                         <div
                           className={`
                             flex
@@ -396,7 +1232,6 @@ export function AdminDashboard() {
                             ${status.bg}
                           `}
                         >
-
                           <span
                             className={`
                               h-2.5
@@ -405,12 +1240,9 @@ export function AdminDashboard() {
                               ${status.dot}
                             `}
                           />
-
                         </div>
 
                       </div>
-
-                      {/* Employee name */}
 
                       <div className="mt-5">
 
@@ -431,8 +1263,6 @@ export function AdminDashboard() {
                         </p>
 
                       </div>
-
-                      {/* Department */}
 
                       <div className="mt-4 flex items-center gap-2">
 
@@ -653,3 +1483,62 @@ export function AdminDashboard() {
   )
 }
 
+/*
+ * ============================================================
+ * REUSABLE FORM FIELD
+ * ============================================================
+ */
+
+const inputClass = `
+  h-11
+  w-full
+  rounded-xl
+  border
+  border-[#DDE3EA]
+  bg-white
+  px-4
+  text-sm
+  text-[#172033]
+  outline-none
+  transition
+  placeholder:text-[#98A2B3]
+  focus:border-[#18B978]
+  focus:ring-4
+  focus:ring-[#18B978]/10
+`
+
+function FormField({
+  label,
+  required = false,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+
+      <label
+        className="
+          mb-2
+          block
+          text-[13px]
+          font-semibold
+          text-[#344054]
+        "
+      >
+        {label}
+
+        {required && (
+          <span className="ml-1 text-[#EF4444]">
+            *
+          </span>
+        )}
+      </label>
+
+      {children}
+
+    </div>
+  )
+}
