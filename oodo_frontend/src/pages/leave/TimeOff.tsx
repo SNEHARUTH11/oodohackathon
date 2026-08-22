@@ -19,6 +19,8 @@ import { Modal } from '../../components/ui/Modal'
 import { publicHolidays as staticPublicHolidays } from '../../data/mockData'
 import { leaveService } from '../../services/leaveService'
 
+const normalizeStatus = (value?: string | null) => String(value ?? 'pending').trim().toLowerCase()
+
 const statusClasses: Record<string, string> = {
   approved: 'bg-dayflow-greenSoft text-dayflow-success',
   pending: 'bg-amber-50 text-dayflow-warning',
@@ -334,46 +336,50 @@ export function TimeOff() {
 
                     <tbody>
                       {filteredRequests.length > 0 ? (
-                        filteredRequests.map((item: any) => (
-                          <tr key={item.id} className="border-b border-dayflow-border last:border-0 hover:bg-dayflow-bg/60">
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-dayflow-blueSoft text-xs font-semibold text-dayflow-blue">
-                                  {getDisplayName(item).charAt(0).toUpperCase()}
+                        filteredRequests.map((item: any) => {
+                          const requestStatus = normalizeStatus(item.status)
+
+                          return (
+                            <tr key={item.id} className="border-b border-dayflow-border last:border-0 hover:bg-dayflow-bg/60">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-dayflow-blueSoft text-xs font-semibold text-dayflow-blue">
+                                    {getDisplayName(item).charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-dayflow-text">{getDisplayName(item)}</div>
+                                    <div className="text-xs text-dayflow-muted">Employee</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div className="font-medium text-dayflow-text">{getDisplayName(item)}</div>
-                                  <div className="text-xs text-dayflow-muted">Employee</div>
+                              </td>
+                              <td className="px-4 py-4 text-dayflow-text">{formatLeaveType(item.leave_type)}</td>
+                              <td className="px-4 py-4 text-dayflow-muted">{item.start_date}</td>
+                              <td className="px-4 py-4 text-dayflow-muted">{item.end_date || item.start_date}</td>
+                              <td className="px-4 py-4 text-dayflow-text">{item.days_count ?? '1'} Days</td>
+                              <td className="px-4 py-4">
+                                <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[requestStatus] ?? 'bg-slate-100 text-slate-600'}`}>
+                                  {requestStatus}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="flex justify-end gap-2">
+                                  {requestStatus === 'pending' ? (
+                                    <>
+                                      <button onClick={() => void handleReject(item.id)} title="Reject" className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100">
+                                        <X size={15} />
+                                      </button>
+                                      <button onClick={() => void handleApprove(item.id)} title="Approve" className="flex h-8 w-8 items-center justify-center rounded-lg bg-dayflow-greenSoft text-dayflow-success transition hover:opacity-80">
+                                        <Check size={15} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-dayflow-muted">No action</span>
+                                  )}
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-dayflow-text">{formatLeaveType(item.leave_type)}</td>
-                            <td className="px-4 py-4 text-dayflow-muted">{item.start_date}</td>
-                            <td className="px-4 py-4 text-dayflow-muted">{item.end_date || item.start_date}</td>
-                            <td className="px-4 py-4 text-dayflow-text">{item.days_count ?? '1'} Days</td>
-                            <td className="px-4 py-4">
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[item.status] ?? 'bg-slate-100 text-slate-600'}`}>
-                                {item.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="flex justify-end gap-2">
-                                {item.status === 'pending' ? (
-                                  <>
-                                    <button onClick={() => void handleReject(item.id)} title="Reject" className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100">
-                                      <X size={15} />
-                                    </button>
-                                    <button onClick={() => void handleApprove(item.id)} title="Approve" className="flex h-8 w-8 items-center justify-center rounded-lg bg-dayflow-greenSoft text-dayflow-success transition hover:opacity-80">
-                                      <Check size={15} />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <span className="text-xs text-dayflow-muted">No action</span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                            </tr>
+                          )
+                        })
                       ) : (
                         <tr>
                           <td colSpan={7} className="px-4 py-12 text-center text-dayflow-muted">No time off requests found.</td>

@@ -16,6 +16,7 @@ type PayrollRow = {
   payslip?: {
     id?: string
     status?: string
+    pdf_url?: string | null
     net_pay?: number
     net_pay_display?: string
     working_days?: number
@@ -30,6 +31,8 @@ export function Payroll() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+
+  const normalizeStatus = (value?: string | null) => (value ?? 'Not generated').toString().trim()
 
   const currentMonth = new Date().getMonth() + 1
   const currentYear = new Date().getFullYear()
@@ -119,7 +122,16 @@ export function Payroll() {
                       const employeeName = row.employee?.name || row.employee?.login_id || 'Employee'
                       const department = row.employee?.department || '—'
                       const payslip = row.payslip
-                      const status = payslip?.status || 'Not generated'
+                      const status = normalizeStatus(payslip?.status || 'Not generated')
+                      const pdfUrl = payslip?.pdf_url || row.payslip?.pdf_url || null
+
+                      const handleAction = () => {
+                        if (pdfUrl) {
+                          window.open(pdfUrl, '_blank', 'noopener,noreferrer')
+                          return
+                        }
+                        window.alert('Payslip PDF not found.')
+                      }
 
                       return (
                         <tr key={`${employeeName}-${index}`} className="border-t border-dayflow-border text-sm">
@@ -129,9 +141,9 @@ export function Payroll() {
                           <td className="px-4 py-4 text-dayflow-text">{payslip?.net_pay_display || '—'}</td>
                           <td className="px-4 py-4">
                             <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                              status === 'Sent'
+                              status.toLowerCase() === 'sent'
                                 ? 'bg-dayflow-greenSoft text-dayflow-success'
-                                : status === 'Draft'
+                                : status.toLowerCase() === 'draft'
                                   ? 'bg-amber-50 text-dayflow-warning'
                                   : 'bg-dayflow-bg text-dayflow-muted'
                             }`}>
@@ -139,10 +151,10 @@ export function Payroll() {
                             </span>
                           </td>
                           <td className="px-4 py-4">
-                            {payslip?.id ? (
-                              <a href={`/payroll/payslip/${payslip.id}`} className="font-medium text-dayflow-green">
+                            {payslip?.id || pdfUrl ? (
+                              <button type="button" onClick={handleAction} className="font-medium text-dayflow-green">
                                 View
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-dayflow-muted">—</span>
                             )}

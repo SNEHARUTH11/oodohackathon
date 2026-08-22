@@ -31,9 +31,11 @@ export function Employees() {
   }, [])
 
   const filtered = useMemo(() => employees.filter((employee) => {
-    const matchesSearch = employee.name.toLowerCase().includes(search.toLowerCase())
+    const name = employee.name || employee.login_id || 'Employee'
+    const employeeId = employee.login_id || employee.emp_code || employee.id || ''
+    const matchesSearch = `${name} ${employeeId}`.toLowerCase().includes(search.toLowerCase())
     const matchesDept = department === 'all' || employee.department === department
-    const matchesStatus = status === 'all' || employee.status === status
+    const matchesStatus = status === 'all' || (employee.status ?? (employee.is_active ? 'Present' : 'Absent')) === status
     return matchesSearch && matchesDept && matchesStatus
   }), [employees, search, department, status])
 
@@ -80,28 +82,34 @@ export function Employees() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((employee) => (
-                    <tr key={employee.id} className="border-t border-dayflow-border text-sm">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <img src={employee.profile_picture || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80'} alt={employee.name} className="h-10 w-10 rounded-xl object-cover" />
-                          <div>
-                            <div className="font-medium text-dayflow-text">{employee.name}</div>
-                            <div className="text-xs text-dayflow-muted">{employee.email}</div>
+                  {filtered.map((employee) => {
+                    const employeeName = employee.name || employee.login_id || 'Employee'
+                    const employeeId = employee.login_id || employee.emp_code || employee.id || '—'
+                    const status = employee.status ?? (employee.is_active ? 'Present' : 'Absent')
+
+                    return (
+                      <tr key={employee.id} className="border-t border-dayflow-border text-sm">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <img src={employee.profile_picture || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80'} alt={employeeName} className="h-10 w-10 rounded-xl object-cover" />
+                            <div>
+                              <div className="font-medium text-dayflow-text">{employeeName}</div>
+                              <div className="text-xs text-dayflow-muted">{employee.email}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-dayflow-muted">{employee.emp_code}</td>
-                      <td className="px-4 py-4 text-dayflow-text">{employee.department}</td>
-                      <td className="px-4 py-4 text-dayflow-text">{employee.job_position}</td>
-                      <td className="px-4 py-4">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${employee.status === 'Present' ? 'bg-dayflow-greenSoft text-dayflow-success' : employee.status === 'On Leave' ? 'bg-amber-50 text-dayflow-warning' : employee.status === 'Absent' ? 'bg-red-50 text-red-600' : 'bg-dayflow-bg text-dayflow-muted'}`}>
-                          {employee.status || 'Present'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4"><a href={`/profile/${employee.id}`} className="font-medium text-dayflow-green">View</a></td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-4 text-dayflow-muted">{employeeId}</td>
+                        <td className="px-4 py-4 text-dayflow-text">{employee.department}</td>
+                        <td className="px-4 py-4 text-dayflow-text">{employee.job_position}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${status === 'Present' ? 'bg-dayflow-greenSoft text-dayflow-success' : status === 'On Leave' ? 'bg-amber-50 text-dayflow-warning' : status === 'Absent' ? 'bg-red-50 text-red-600' : 'bg-dayflow-bg text-dayflow-muted'}`}>
+                            {status || 'Present'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4"><a href={`/profile/${employee.id}`} className="font-medium text-dayflow-green">View</a></td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

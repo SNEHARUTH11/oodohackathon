@@ -37,6 +37,18 @@ type AttendanceEntry = {
   status?: string
 }
 
+const normalizeStatus = (value?: string | null) => {
+  if (!value) return 'Absent'
+  const raw = String(value).trim().toLowerCase()
+
+  if (raw === 'present' || raw === 'p') return 'Present'
+  if (raw === 'half_day' || raw === 'half day' || raw === 'half-day' || raw === 'hd') return 'Half Day'
+  if (raw === 'leave' || raw === 'on_leave' || raw === 'on leave' || raw === 'l') return 'Leave'
+  if (raw === 'absent' || raw === 'a') return 'Absent'
+  if (raw === 'holiday' || raw === 'weekend') return 'Leave'
+  return value
+}
+
 const markStatusColor = {
   Present: 'bg-dayflow-greenSoft text-dayflow-success',
   Absent: 'bg-red-50 text-red-600',
@@ -294,7 +306,7 @@ export function Attendance() {
    * Filter attendance according to role.
    */
   const filteredAttendance = useMemo(() => {
-    let result = [...attendance]
+    let result = [...attendance.map((item) => ({ ...item, status: normalizeStatus(item.status) }))]
 
     /*
      * ==========================================
@@ -411,19 +423,24 @@ export function Attendance() {
    * STATISTICS
    * ==========================================
    */
-  const presentDays = attendance.filter(
+  const normalizedAttendance = attendance.map((item) => ({
+    ...item,
+    status: normalizeStatus(item.status),
+  }))
+
+  const presentDays = normalizedAttendance.filter(
     (item) => item.status === 'Present',
   ).length
 
-  const leaveDays = attendance.filter(
+  const leaveDays = normalizedAttendance.filter(
     (item) => item.status === 'Leave',
   ).length
 
-  const absentDays = attendance.filter(
+  const absentDays = normalizedAttendance.filter(
     (item) => item.status === 'Absent',
   ).length
 
-  const totalWorkingDays = attendance.filter(
+  const totalWorkingDays = normalizedAttendance.filter(
     (item) =>
       item.status === 'Present' ||
       item.status === 'Half Day',
