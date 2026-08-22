@@ -1,0 +1,45 @@
+{
+  "company": {
+    "name": "Odoo India",
+    "prefix": "OI",
+    "timezone": "Asia/Kolkata"
+  },
+  "admin": {
+    "name": "Root Admin",
+    "email": "hr.admin@odoo.in",
+    "password": null
+  },
+  "attendance": {
+    "working_weekdays": [1, 2, 3, 4, 5],
+    "standard_hours_per_day": 8.0,
+    "half_day_threshold_hours": 8.0,
+    "break_time_hrs": 1.0,
+    "sick_leave_backdate_days": 30
+  },
+  "leave": {
+    "paid_leave_total": 24,
+    "sick_leave_total": 7
+  },
+  "payroll": {
+    "pf_rate_percent": 12.0,
+    "professional_tax": 200.0,
+    "components": [
+      {"key": "basic", "label": "Basic Salary", "basis": "wage", "percent": 50},
+      {"key": "hra", "label": "House Rent Allowance", "basis": "basic", "percent": 50},
+      {"key": "standard_allowance", "label": "Standard Allowance", "basis": "wage", "percent": 8.33},
+      {"key": "performance_bonus", "label": "Performance Bonus", "basis": "basic", "percent": 8.33},
+      {"key": "lta", "label": "Leave Travel Allowance", "basis": "basic", "percent": 8.33},
+      {"key": "fixed_allowance", "label": "Fixed Allowance", "basis": "remainder"}
+    ]
+  },
+  "holidays": [
+    {"name": "Republic Day", "date": "2026-01-26"},
+    {"name": "Dhuleti", "date": "2026-03-04"},
+    {"name": "Independence Day", "date": "2026-08-15"},
+    {"name": "Rakhi", "date": "2026-08-29"},
+    {"name": "Gandhi Jayanti", "date": "2026-10-02"},
+    {"name": "Diwali", "date": "2026-11-08"},
+    {"name": "New Year", "date": "2026-11-10"},
+    {"name": "Bhai Duj", "date": "2026-11-11"}
+  ]
+}
