@@ -1,9 +1,9 @@
+
 import {
   ArrowRight,
   Bell,
   CheckCircle2,
   ChevronDown,
-  Plus,
   Search,
   UserRound,
   UsersRound,
@@ -222,7 +222,6 @@ export function EmployeeDashboard() {
     setCheckInTime(formattedTime)
     setIsCheckedIn(true)
 
-    // Update selected employee if Sneha is selected
     if (selectedEmployee?.id === 'EMP-001') {
       setSelectedEmployee({
         ...selectedEmployee,
@@ -403,8 +402,6 @@ export function EmployeeDashboard() {
                 ) : (
                   <span className="h-3 w-3 rounded-full bg-white" />
                 )}
-
-                {/* Small status ring */}
 
                 <span
                   className={`
@@ -757,37 +754,6 @@ export function EmployeeDashboard() {
               </div>
 
             </div>
-
-            {/* Add Employee */}
-
-            <button
-              type="button"
-              className="
-                flex
-                h-10
-                items-center
-                justify-center
-                gap-2
-                self-start
-                rounded-lg
-                bg-[#18B978]
-                px-4
-                text-sm
-                font-semibold
-                text-white
-                shadow-sm
-                transition
-                hover:bg-[#119B65]
-                hover:shadow-md
-                sm:self-auto
-              "
-            >
-
-              <Plus size={18} />
-
-              Add Employee
-
-            </button>
 
           </div>
 
@@ -1214,3 +1180,4 @@ export function EmployeeDashboard() {
     </AppLayout>
   )
 }
+
