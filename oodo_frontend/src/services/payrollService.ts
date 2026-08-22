@@ -6,8 +6,8 @@ export const payrollService = {
   getMyPayroll: async () => {
     if (USE_MOCK_DATA) return payslips[0]
     try {
-      const { data } = await api.get('/payroll/me')
-      return data
+      const { data } = await api.get('/payroll/me/')
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load payroll'))
     }
@@ -16,8 +16,8 @@ export const payrollService = {
   getPayroll: async () => {
     if (USE_MOCK_DATA) return payslips
     try {
-      const { data } = await api.get('/payroll')
-      return data
+      const { data } = await api.get('/payroll/')
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load payroll summary'))
     }
@@ -26,8 +26,8 @@ export const payrollService = {
   generatePayslip: async (employeeId: string, month: string) => {
     if (USE_MOCK_DATA) return { employeeId, month, status: 'Generated' }
     try {
-      const { data } = await api.post(`/payroll/payslip/${employeeId}/${month}/generate`)
-      return data
+      const { data } = await api.post(`/payroll/payslip/${employeeId}/${month}/generate/`)
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to generate payslip'))
     }
@@ -36,8 +36,8 @@ export const payrollService = {
   getPayslip: async (employeeId: string, month: string) => {
     if (USE_MOCK_DATA) return payslips.find((item) => item.employee_id === employeeId && item.month === month) || null
     try {
-      const { data } = await api.get(`/payroll/payslip/${employeeId}/${month}`)
-      return data
+      const { data } = await api.get(`/payroll/payslip/${employeeId}/${month}/`)
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load payslip'))
     }
@@ -46,8 +46,8 @@ export const payrollService = {
   getSalaryStructure: async () => {
     if (USE_MOCK_DATA) return salaryStructures
     try {
-      const { data } = await api.get('/payroll')
-      return data
+      const { data } = await api.get('/payroll/')
+      return data?.data ?? data
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to load salary structures'))
     }
