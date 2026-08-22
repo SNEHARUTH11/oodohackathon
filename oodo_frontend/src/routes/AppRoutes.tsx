@@ -17,7 +17,10 @@ import { Notifications } from '../pages/notifications/Notifications'
 import { Settings } from '../pages/settings/Settings'
 import { AccountSettings } from '../pages/settings/AccountSettings'
 import { SecuritySettings } from '../pages/settings/SecuritySettings'
+import { NotificationsSettings } from '../pages/settings/NotificationsSettings'
+import { CompanySettings } from '../pages/settings/CompanySettings'
 import { MyProfile } from '../pages/profile/MyProfile'
+import { ChangePassword } from '../pages/auth/ChangePassword'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleRoute } from './RoleRoute'
 import { useAuth } from '../hooks/useAuth'
@@ -49,6 +52,7 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/my-profile" element={<MyProfile />} />
         <Route path="/profile/:employeeId" element={<EmployeeProfile />} />
         <Route path="/attendance" element={<Attendance />} />
@@ -63,6 +67,8 @@ export default function AppRoutes() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/account" element={<AccountSettings />} />
         <Route path="/settings/security" element={<SecuritySettings />} />
+        <Route path="/settings/notifications" element={<NotificationsSettings />} />
+        <Route path="/settings/company" element={<CompanySettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/sign-in" replace />} />

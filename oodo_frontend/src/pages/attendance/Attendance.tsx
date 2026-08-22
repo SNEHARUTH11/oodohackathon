@@ -5,10 +5,13 @@ import {
   ChevronRight,
   Search,
 } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
 
 import { AppLayout } from '../../components/layout/AppLayout'
 import { Card } from '../../components/ui/Card'
+import { Modal } from '../../components/ui/Modal'
 import { attendanceService } from '../../services/attendanceService'
+import { employeeService } from '../../services/employeeService'
 
 type UserRole = 'admin' | 'hr' | 'employee'
 
@@ -131,15 +134,27 @@ export function Attendance() {
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null)
 
+  const { user } = useAuth()
+
+  const [todayState, setTodayState] = useState<any>(null)
+
   const [attendance, setAttendance] = useState<AttendanceEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [adminModalOpen, setAdminModalOpen] = useState(false)
+  const [employeesList, setEmployeesList] = useState<any[]>([])
+  const [adminForm, setAdminForm] = useState<any>(null)
 
   /*
    * Load logged-in user.
    */
   useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
+    // prefer AuthContext user when available
+    if (user) {
+      setCurrentUser(user as CurrentUser)
+    } else {
+      const local = getCurrentUser()
+      setCurrentUser(local)
+    }
   }, [])
 
   /*
@@ -172,25 +187,52 @@ export function Attendance() {
   useEffect(() => {
     let ignore = false
 
+    const fetchAdminDay = async (iso: string) => {
+      const items = await attendanceService.adminDayList(iso, search)
+      const mapped = (items ?? []).map((it: any, idx: number) => ({
+        id: String(idx),
+        date: it.check_in ? String(it.date) : String(it.date),
+        employee_name: it.employee?.name ?? it.employee?.full_name ?? it.employee?.login_id,
+        employee_id: it.employee?.id ?? undefined,
+        check_in: it.check_in ?? null,
+        check_out: it.check_out ?? null,
+        work_hours: it.work_hours ?? null,
+        extra_hours: it.extra_hours ?? null,
+        status: it.status ?? null,
+      }))
+      if (!ignore) setAttendance(mapped)
+    }
+
     const loadAttendance = async () => {
       try {
         setLoading(true)
+        if (isAdminOrHR && view === 'day') {
+          const iso = date.toISOString().slice(0, 10)
+          await fetchAdminDay(iso)
+        } else {
+          // employee / month view
+          const month = view === 'month' ? date.getMonth() + 1 : undefined
+          const year = view === 'month' ? date.getFullYear() : undefined
+          const days = await attendanceService.getAttendance(month, year)
+          const mapped = (days ?? []).map((d: any) => ({
+            id: d.id ?? String(d.date),
+            date: typeof d.date === 'string' ? d.date : String(d.date),
+            check_in: d.check_in ?? null,
+            check_out: d.check_out ?? null,
+            work_hours: d.work_hours ?? null,
+            extra_hours: d.extra_hours ?? null,
+            status: d.status ?? null,
+            employee_name: d.employee_name ?? d.employee ?? undefined,
+            employee_id: d.employee_id ?? d.employee_id,
+          }))
 
-        const data = await attendanceService.getAttendance()
-
-        if (!ignore) {
-          setAttendance(data ?? [])
+          if (!ignore) setAttendance(mapped)
         }
       } catch (error) {
         console.error('Failed to load attendance:', error)
-
-        if (!ignore) {
-          setAttendance([])
-        }
+        if (!ignore) setAttendance([])
       } finally {
-        if (!ignore) {
-          setLoading(false)
-        }
+        if (!ignore) setLoading(false)
       }
     }
 
@@ -200,6 +242,37 @@ export function Attendance() {
       ignore = true
     }
   }, [])
+
+  // load employees for admin forms
+  useEffect(() => {
+    let ignore = false
+    const loadEmployees = async () => {
+      try {
+        const emps = await employeeService.getEmployees()
+        if (!ignore) setEmployeesList(emps ?? [])
+      } catch {
+        if (!ignore) setEmployeesList([])
+      }
+    }
+    if (isAdminOrHR) void loadEmployees()
+    return () => { ignore = true }
+  }, [isAdminOrHR])
+
+  // load today's state (check-in / check-out) for employees
+  useEffect(() => {
+    let ignore = false
+    const loadState = async () => {
+      if (!isEmployee) return
+      try {
+        const st = await attendanceService.getTodayState()
+        if (!ignore) setTodayState(st)
+      } catch (err) {
+        console.error('Failed to load today state', err)
+      }
+    }
+    void loadState()
+    return () => { ignore = true }
+  }, [isEmployee])
 
   /*
    * Date label.
@@ -477,6 +550,34 @@ export function Attendance() {
             {/* DATE CONTROLS */}
 
             <div className="flex flex-wrap items-center gap-2">
+
+              {isEmployee && (
+                <div className="mr-2 flex items-center gap-2">
+                  <div className={`h-3 w-3 rounded-full ${todayState?.checked_in ? 'bg-dayflow-green' : 'bg-red-500'}`} />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (todayState?.can_check_out) {
+                          await attendanceService.checkOut()
+                        } else if (todayState?.can_check_in) {
+                          await attendanceService.checkIn()
+                        }
+                        const st = await attendanceService.getTodayState()
+                        setTodayState(st)
+                        // reload attendance
+                        const days = await attendanceService.getAttendance()
+                        setAttendance(days ?? [])
+                      } catch (err) {
+                        console.error(err)
+                      }
+                    }}
+                    className="h-9 rounded-lg border border-dayflow-border bg-dayflow-green px-3 text-sm font-medium text-white"
+                  >
+                    {todayState?.can_check_out ? 'Check Out' : todayState?.can_check_in ? 'Check In' : '—'}
+                  </button>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -765,6 +866,28 @@ export function Attendance() {
                         </td>
                       )}
 
+                      {isAdminOrHR && (
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdminForm({
+                                attendance_id: entry.id,
+                                employee_id: entry.employee_id,
+                                date: entry.date,
+                                check_in: entry.check_in ?? '',
+                                check_out: entry.check_out ?? '',
+                                status: entry.status ?? '',
+                              })
+                              setAdminModalOpen(true)
+                            }}
+                            className="rounded-md px-3 py-1 text-sm font-medium text-dayflow-green border border-dayflow-border"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      )}
+
                     </tr>
 
                   ))}
@@ -797,6 +920,108 @@ export function Attendance() {
           </div>
 
         </Card>
+        {/* Admin Edit Modal */}
+        <Modal open={adminModalOpen} onClose={() => setAdminModalOpen(false)} title={adminForm ? 'Edit Attendance' : 'Create Attendance'}>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              try {
+                if (adminForm?.attendance_id) {
+                  await attendanceService.adminUpdate(adminForm.attendance_id, {
+                    employee: adminForm.employee_id,
+                    date: adminForm.date,
+                    check_in: adminForm.check_in || null,
+                    check_out: adminForm.check_out || null,
+                    status: adminForm.status || null,
+                  })
+                } else {
+                  await attendanceService.adminCreate({
+                    employee: adminForm.employee_id,
+                    date: adminForm.date,
+                    check_in: adminForm.check_in || null,
+                    check_out: adminForm.check_out || null,
+                    status: adminForm.status || null,
+                  })
+                }
+
+                // refresh day list
+                const iso = new Date(adminForm.date).toISOString().slice(0, 10)
+                const items = await attendanceService.adminDayList(iso, '')
+                const mapped = (items ?? []).map((it: any, idx: number) => ({
+                  id: String(idx),
+                  date: String(it.date),
+                  employee_name: it.employee?.name ?? it.employee?.full_name ?? it.employee?.login_id,
+                  employee_id: it.employee?.id ?? undefined,
+                  check_in: it.check_in ?? null,
+                  check_out: it.check_out ?? null,
+                  work_hours: it.work_hours ?? null,
+                  extra_hours: it.extra_hours ?? null,
+                  status: it.status ?? null,
+                }))
+                setAttendance(mapped)
+                setAdminModalOpen(false)
+              } catch (err) {
+                console.error('Failed to save attendance', err)
+              }
+            }}
+          >
+            <div className="grid gap-3">
+              <label className="block text-sm text-dayflow-muted">Employee</label>
+              <select
+                value={adminForm?.employee_id ?? ''}
+                onChange={(e) => setAdminForm((s: any) => ({ ...(s ?? {}), employee_id: e.target.value }))}
+                className="rounded-lg border border-dayflow-border p-2"
+              >
+                <option value="">Select employee</option>
+                {employeesList.map((emp) => (
+                  <option key={emp.id} value={emp.id}>{emp.name ?? emp.user?.name ?? emp.login_id}</option>
+                ))}
+              </select>
+
+              <label className="block text-sm text-dayflow-muted">Date</label>
+              <input
+                type="date"
+                value={adminForm?.date ?? ''}
+                onChange={(e) => setAdminForm((s: any) => ({ ...(s ?? {}), date: e.target.value }))}
+                className="rounded-lg border border-dayflow-border p-2"
+              />
+
+              <label className="block text-sm text-dayflow-muted">Check In</label>
+              <input
+                type="time"
+                value={adminForm?.check_in ?? ''}
+                onChange={(e) => setAdminForm((s: any) => ({ ...(s ?? {}), check_in: e.target.value }))}
+                className="rounded-lg border border-dayflow-border p-2"
+              />
+
+              <label className="block text-sm text-dayflow-muted">Check Out</label>
+              <input
+                type="time"
+                value={adminForm?.check_out ?? ''}
+                onChange={(e) => setAdminForm((s: any) => ({ ...(s ?? {}), check_out: e.target.value }))}
+                className="rounded-lg border border-dayflow-border p-2"
+              />
+
+              <label className="block text-sm text-dayflow-muted">Status</label>
+              <select
+                value={adminForm?.status ?? ''}
+                onChange={(e) => setAdminForm((s: any) => ({ ...(s ?? {}), status: e.target.value }))}
+                className="rounded-lg border border-dayflow-border p-2"
+              >
+                <option value="">Select status</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Leave">Leave</option>
+                <option value="Half Day">Half Day</option>
+              </select>
+
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setAdminModalOpen(false)} className="rounded-md px-4 py-2 border">Cancel</button>
+                <button type="submit" className="rounded-md bg-dayflow-green px-4 py-2 text-white">Save</button>
+              </div>
+            </div>
+          </form>
+        </Modal>
       </div>
     </AppLayout>
   )

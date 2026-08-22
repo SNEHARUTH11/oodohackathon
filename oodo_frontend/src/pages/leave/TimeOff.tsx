@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import {
   CalendarDays,
   Check,
@@ -54,13 +55,8 @@ export function TimeOff() {
     'requests',
   )
 
-  /*
-   * Change this to true when the logged-in user is an Admin/HR user.
-   *
-   * false = Employee view
-   * true  = Admin / HR view
-   */
-  const isAdmin = false
+  const { user } = useAuth()
+  const isAdmin = (user?.role === 'admin' || user?.role === 'hr_officer')
 
   const filteredRequests = useMemo(() => {
     const query = search.toLowerCase().trim()
@@ -148,7 +144,12 @@ export function TimeOff() {
             </div>
 
             <h2 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-dayflow-text">
-              Time Off
+              <span className="inline-flex items-center gap-2">
+                Time Off
+                {!isAdmin && (
+                  <span className="rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">NEW</span>
+                )}
+              </span>
             </h2>
 
             <p className="mt-1 text-sm text-dayflow-muted">
