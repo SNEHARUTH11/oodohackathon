@@ -46,6 +46,28 @@ export const settingsService = {
     }
   },
 
+  uploadProfilePicture: async (formData: FormData) => {
+    if (USE_MOCK_DATA) return { success: true, url: mockProfile.profile_picture }
+    try {
+      const { data } = await api.post('/employee/profile/picture/upload/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to upload profile picture'))
+    }
+  },
+
+  getPublicProfile: async () => {
+    if (USE_MOCK_DATA) return mockProfile
+    try {
+      const { data } = await api.get('/employee/profile/public-view/')
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load public profile'))
+    }
+  },
+
   updatePassword: async (payload: Record<string, string>) => {
     if (USE_MOCK_DATA) return { success: true, message: 'Password updated successfully.' }
     try {

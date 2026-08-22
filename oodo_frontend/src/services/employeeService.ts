@@ -195,5 +195,89 @@ export const employeeService = {
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to delete document'))
     }
+  },
+
+  // ==========================================
+  // EMPLOYEE SELF-SERVICE ENDPOINTS
+  // ==========================================
+  
+  getMyBank: async () => {
+    if (USE_MOCK_DATA) return null
+    try {
+      const { data } = await api.get(`/employee/bank/view/`)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load my bank details'))
+    }
+  },
+
+  getMySkills: async () => {
+    if (USE_MOCK_DATA) return []
+    try {
+      const { data } = await api.get(`/employee/skill/list/`)
+      return data?.items ?? data?.data ?? data ?? []
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load my skills'))
+    }
+  },
+
+  createMySkill: async (payload: Record<string, unknown>) => {
+    if (USE_MOCK_DATA) return { id: 's-new', ...payload }
+    try {
+      const { data } = await api.post(`/employee/skill/create/`, payload)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to add my skill'))
+    }
+  },
+
+  deleteMySkill: async (skillId: string) => {
+    if (USE_MOCK_DATA) return { id: skillId }
+    try {
+      const { data } = await api.delete(`/employee/skill/delete/${skillId}/`)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to delete my skill'))
+    }
+  },
+
+  getMyCertifications: async () => {
+    if (USE_MOCK_DATA) return []
+    try {
+      const { data } = await api.get(`/employee/certification/list/`)
+      return data?.items ?? data?.data ?? data ?? []
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load my certifications'))
+    }
+  },
+
+  createMyCertification: async (payload: Record<string, unknown>) => {
+    if (USE_MOCK_DATA) return { id: 'c-new', ...payload }
+    try {
+      const { data } = await api.post(`/employee/certification/create/`, payload)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to add my certification'))
+    }
+  },
+
+  deleteMyCertification: async (certId: string) => {
+    if (USE_MOCK_DATA) return { id: certId }
+    try {
+      const { data } = await api.delete(`/employee/certification/delete/${certId}/`)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to delete my certification'))
+    }
+  },
+
+  getMyDocuments: async () => {
+    if (USE_MOCK_DATA) return []
+    try {
+      const { data } = await api.get(`/employee/document/list/`)
+      return data?.items ?? data?.data ?? data ?? []
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load my documents'))
+    }
   }
 }

@@ -78,5 +78,17 @@ export const authService = {
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to change password'))
     }
+  },
+
+  refresh: async () => {
+    if (USE_MOCK_DATA) return { access: 'mock-token-refreshed' }
+    try {
+      const raw = localStorage.getItem('dayflow-auth')
+      const refreshToken = raw ? JSON.parse(raw).refreshToken : null
+      const { data } = await api.post('/refresh/', { refresh: refreshToken })
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to refresh token'))
+    }
   }
 }

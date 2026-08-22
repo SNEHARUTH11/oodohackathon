@@ -274,6 +274,50 @@ export const payrollService = {
   },
 
   // ============================================================
+  // EMPLOYEE - MY PAYSLIPS
+  // ============================================================
+  getMyPayslips: async (params?: PayrollListParams) => {
+    if (USE_MOCK_DATA) {
+      return payslips
+    }
+
+    try {
+      const { data } = await api.get('/employee/payroll/payslip/list/', { params })
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load my payslips'))
+    }
+  },
+
+  getMyPayslipById: async (payslipId: string): Promise<Payslip | null> => {
+    if (USE_MOCK_DATA) {
+      return payslips.find((payslip) => payslip.id === payslipId) || null
+    }
+
+    try {
+      const { data } = await api.get(`/employee/payroll/payslip/view/${payslipId}/`)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load payslip'))
+    }
+  },
+
+  downloadMyPayslip: async (payslipId: string): Promise<Blob> => {
+    if (USE_MOCK_DATA) {
+      throw new Error('Payslip download is not available while mock data is enabled.')
+    }
+
+    try {
+      const response = await api.get(`/employee/payroll/payslip/download/${payslipId}/`, {
+        responseType: 'blob',
+      })
+      return response.data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to download payslip'))
+    }
+  },
+
+  // ============================================================
   // Helper:
   // Download PDF directly in browser
   // ============================================================

@@ -63,6 +63,16 @@ export const leaveService = {
     }
   },
 
+  cancelLeave: async (id: string) => {
+    if (USE_MOCK_DATA) return { id, status: 'cancelled' }
+    try {
+      const { data } = await api.post(`/employee/timeoff/request/cancel/${id}/`)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to cancel leave request'))
+    }
+  },
+
   approveLeave: async (id: string, reviewComment?: string) => {
     if (USE_MOCK_DATA) return { id, status: 'approved', review_comment: reviewComment }
     try {
