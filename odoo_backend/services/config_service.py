@@ -68,7 +68,7 @@ def seed_onboarding(config):
     if not admin:
         from services.employee_service import generate_login_id
         name_parts = a["name"].strip().split(" ", 1)
-        from django.contrib.auth import get_random_string
+        from django.utils.crypto import get_random_string
         temp_password = a.get("password") or get_random_string(12)
         admin = User.objects.create_user(
             email=a["email"],
