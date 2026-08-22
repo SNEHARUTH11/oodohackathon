@@ -11,6 +11,7 @@ export type AttendanceStatus =
 export interface Attendance {
   id: string
   employee_id: string
+  employee?: string
   date: string
   check_in?: string
   check_out?: string
@@ -20,15 +21,6 @@ export interface Attendance {
 }
 
 const fallbackAttendance = attendance
-
-const getStatus = (error: unknown) =>
-  Number(
-    (error as {
-      response?: {
-        status?: number
-      }
-    })?.response?.status,
-  )
 
 export const attendanceService = {
   // =========================================================

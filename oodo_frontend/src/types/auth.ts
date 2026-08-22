@@ -22,4 +22,5 @@ export interface User {
   profile_picture?: string
   emp_code: string
   is_active: boolean
+  change_password?: boolean | string
 }
