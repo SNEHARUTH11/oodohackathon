@@ -88,3 +88,72 @@ def seed_onboarding(config):
     if temp_password:
         summary["admin_temp_password"] = temp_password
     return summary
+
+# ── Company settings & holidays (admin) ─────────────────────────────────────
+
+CONFIG_PAYLOAD_FIELDS = (
+    "working_weekdays", "standard_hours_per_day", "half_day_threshold_hours",
+    "break_time_hrs", "sick_leave_backdate_days", "paid_leave_total",
+    "sick_leave_total", "pf_rate_percent", "professional_tax",
+)
+
+
+def get_settings():
+    cfg = CompanyConfig.objects.select_related("company").first()
+    if not cfg:
+        raise RuntimeError("CompanyConfig missing — run: python manage.py seed_onboarding")
+    return {
+        "company": {"id": cfg.company_id, "name": cfg.company.name,
+                    "prefix": cfg.company.prefix,
+                    "timezone": cfg.company.timezone,
+                    "logo": cfg.company.logo.url if cfg.company.logo else None},
+        "config": {f: getattr(cfg, f) for f in CONFIG_PAYLOAD_FIELDS},
+    }
+
+
+def update_settings(data):
+    cfg = CompanyConfig.load()
+    for field in CONFIG_PAYLOAD_FIELDS:
+        if field in data:
+            setattr(cfg, field, data[field])
+    cfg.save()
+    logger.info(f"CompanyConfig updated: {list(data.keys())}")
+    return get_settings()
+
+
+def holiday_list(params):
+    cfg = CompanyConfig.load()
+    qs = PublicHoliday.objects.filter(company=cfg.company).order_by("date")
+    year = params.get("year")
+    if year:
+        try:
+            qs = qs.filter(date__year=int(year))
+        except (TypeError, ValueError):
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"year": ["Must be an integer."]})
+    return qs
+
+
+def holiday_create(data):
+    cfg = CompanyConfig.load()
+    if PublicHoliday.objects.filter(company=cfg.company, date=data["date"]).exists():
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({"date": ["A holiday already exists on this date."]})
+    return PublicHoliday.objects.create(company=cfg.company, **data)
+
+
+def holiday_update(holiday, data):
+    cfg = CompanyConfig.load()
+    new_date = data.get("date", holiday.date)
+    if (PublicHoliday.objects.filter(company=cfg.company, date=new_date)
+            .exclude(id=holiday.id).exists()):
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({"date": ["A holiday already exists on this date."]})
+    for f, v in data.items():
+        setattr(holiday, f, v)
+    holiday.save()
+    return holiday
+
+
+def holiday_delete(holiday):
+    holiday.delete()

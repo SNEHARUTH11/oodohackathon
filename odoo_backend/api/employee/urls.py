@@ -10,10 +10,20 @@ from api.employee.views.profile import (
     profile_picture_upload, profile_public_view, profile_update, profile_view,
 )
 from api.employee.views.skill import skill_create, skill_delete, skill_list
-
+from api.employee.views.timeoff import (
+    balance_view, calendar, request_cancel, request_create, request_list,
+)
 app_name = "employee"
 
 urlpatterns = [
+    # ── Time Off ──────────────────────────────────────────────────────
+    path("timeoff/calendar/", calendar.TimeOffCalendarView.as_view(), name="timeoff-calendar"),
+    path("timeoff/balance/view/", balance_view.TimeOffBalanceView.as_view(), name="timeoff-balance"),
+    path("timeoff/request/create/", request_create.TimeOffRequestCreateView.as_view(), name="timeoff-request-create"),
+    path("timeoff/request/list/", request_list.TimeOffRequestListView.as_view(), name="timeoff-request-list"),
+    path("timeoff/request/cancel/<uuid:request_id>/", request_cancel.TimeOffRequestCancelView.as_view(), name="timeoff-request-cancel"),
+
+    # ── Attendance ────────────────────────────────────────────────────
     path("attendance/today/", today.AttendanceTodayView.as_view(), name="attendance-today"),
     path("attendance/check-in/", check_in.CheckInView.as_view(), name="attendance-check-in"),
     path("attendance/check-out/", check_out.CheckOutView.as_view(), name="attendance-check-out"),

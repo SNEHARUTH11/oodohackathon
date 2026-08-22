@@ -22,7 +22,10 @@ class Attendance(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PRESENT)
     work_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     extra_hours = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
-    # linked_time_off FK → added in Milestone 4 (leaves app)
+    linked_time_off = models.ForeignKey(
+        "leaves.TimeOffRequest", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="attendance_records",
+    )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="attendance_corrections",

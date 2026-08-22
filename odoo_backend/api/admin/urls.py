@@ -10,12 +10,33 @@ from api.admin.views.attendance import (
     create as att_create, day_list, missed_checkouts, monthly_list,
     update as att_update,
 )
-
+from api.admin.views.settings import (
+    company_update, company_view, holiday_create, holiday_delete, holiday_list,
+    holiday_update,
+)
+from api.admin.views.timeoff import (
+    allocation_list, allocation_update, approve, reject, request_list as tof_request_list,
+)
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
 
 urlpatterns = [
+    # ── Time Off ──────────────────────────────────────────────────────
+    path("timeoff/request/list/", tof_request_list.AdminTimeOffRequestListView.as_view(), name="timeoff-request-list"),
+    path("timeoff/request/approve/<uuid:request_id>/", approve.TimeOffApproveView.as_view(), name="timeoff-approve"),
+    path("timeoff/request/reject/<uuid:request_id>/", reject.TimeOffRejectView.as_view(), name="timeoff-reject"),
+    path("timeoff/allocation/list/", allocation_list.AllocationListView.as_view(), name="timeoff-allocation-list"),
+    path("timeoff/allocation/update/<uuid:employee_id>/", allocation_update.AllocationUpdateView.as_view(), name="timeoff-allocation-update"),
+
+    # ── Settings ──────────────────────────────────────────────────────
+    path("settings/company/view/", company_view.CompanySettingsView.as_view(), name="settings-company-view"),
+    path("settings/company/update/", company_update.CompanySettingsUpdateView.as_view(), name="settings-company-update"),
+    path("settings/holiday/list/", holiday_list.HolidayListView.as_view(), name="settings-holiday-list"),
+    path("settings/holiday/create/", holiday_create.HolidayCreateView.as_view(), name="settings-holiday-create"),
+    path("settings/holiday/update/<uuid:holiday_id>/", holiday_update.HolidayUpdateView.as_view(), name="settings-holiday-update"),
+    path("settings/holiday/delete/<uuid:holiday_id>/", holiday_delete.HolidayDeleteView.as_view(), name="settings-holiday-delete"),
+
     # ── Attendance ────────────────────────────────────────────────────
     path("attendance/day-list/", day_list.AdminDayListView.as_view(), name="attendance-day-list"),
     path("attendance/monthly-list/", monthly_list.AdminMonthlyListView.as_view(), name="attendance-monthly-list"),
