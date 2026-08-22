@@ -9,8 +9,6 @@ from rest_framework.exceptions import ValidationError
 
 from apps.company.models import Company
 from apps.employees.models import BankDetail, Certification, Document, Skill
-from oodohackathon.odoo_backend.api import employee
-from oodohackathon.odoo_backend.apps.employees.serializers import employee
 from services.notification_service import notify, send_email
 
 logger = logging.getLogger(__name__)

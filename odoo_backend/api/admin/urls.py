@@ -22,7 +22,7 @@ from api.admin.views.payroll import (
     payslip_send, payslip_view, structure_update, structure_view,
 )
 from api.admin.views.dashboard import overview as adm_dash
-from oodohackathon.odoo_backend.api.admin.views.employees import password_reset
+from api.admin.views.employees import password_reset
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
