@@ -85,5 +85,27 @@ export const leaveService = {
     } catch (error) {
       throw new Error(handleApiError(error, 'Unable to reject leave'))
     }
+  },
+
+  getAllocations: async () => {
+    if (USE_MOCK_DATA) return []
+
+    try {
+      const { data } = await api.get('/admin/timeoff/allocation/list/')
+      return data?.data?.items ?? data?.items ?? data?.data ?? data ?? []
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to load time-off allocations'))
+    }
+  },
+
+  updateAllocation: async (employeeId: string, payload: Record<string, unknown>) => {
+    if (USE_MOCK_DATA) return { employee_id: employeeId, ...payload }
+
+    try {
+      const { data } = await api.patch(`/admin/timeoff/allocation/update/${employeeId}/`, payload)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to update time-off allocation'))
+    }
   }
 }
