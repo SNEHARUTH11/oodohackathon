@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import {
   CalendarDays,
   Check,
@@ -15,18 +16,20 @@ import { AppLayout } from '../../components/layout/AppLayout'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Modal } from '../../components/ui/Modal'
-import { leaveRequests, publicHolidays } from '../../data/mockData'
+import { publicHolidays as staticPublicHolidays } from '../../data/mockData'
+import { leaveService } from '../../services/leaveService'
 
-const statusClasses = {
+const statusClasses: Record<string, string> = {
   approved: 'bg-dayflow-greenSoft text-dayflow-success',
   pending: 'bg-amber-50 text-dayflow-warning',
   rejected: 'bg-red-50 text-red-600',
-} as const
+  cancelled: 'bg-slate-100 text-slate-600',
+}
 
-const leaveTypeClasses = {
-  'Paid Time Off': 'bg-dayflow-blueSoft text-dayflow-blue',
-  'Sick Leave': 'bg-amber-50 text-dayflow-warning',
-  'Unpaid Leave': 'bg-red-50 text-red-600',
+const leaveTypeClasses: Record<string, string> = {
+  paid: 'bg-dayflow-blueSoft text-dayflow-blue',
+  sick: 'bg-amber-50 text-dayflow-warning',
+  unpaid: 'bg-red-50 text-red-600',
 }
 
 const months = [
@@ -46,43 +49,90 @@ const months = [
 
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+const formatLeaveType = (value?: string) => {
+  const map: Record<string, string> = {
+    paid: 'Paid Time Off',
+    sick: 'Sick Leave',
+    unpaid: 'Unpaid Leave',
+  }
+
+  return map[value ?? ''] ?? value ?? 'Leave'
+}
+
+const getDisplayName = (item: any) => {
+  if (item?.employee?.name) return item.employee.name
+  if (item?.employee_name) return item.employee_name
+  if (typeof item?.employee === 'string') return item.employee
+  return 'Employee'
+}
+
 export function TimeOff() {
   const [open, setOpen] = useState(false)
-  const [activeMonth, setActiveMonth] = useState(9)
+  const [activeMonth, setActiveMonth] = useState(new Date().getMonth())
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'requests' | 'allocation'>(
-    'requests',
-  )
+  const [activeTab, setActiveTab] = useState<'requests' | 'allocation'>('requests')
+  const [requests, setRequests] = useState<any[]>([])
+  const [calendar, setCalendar] = useState<any | null>(null)
+  const [balances, setBalances] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    leave_type: 'paid',
+    start_date: '',
+    end_date: '',
+    remarks: '',
+  })
 
-  /*
-   * Change this to true when the logged-in user is an Admin/HR user.
-   *
-   * false = Employee view
-   * true  = Admin / HR view
-   */
-  const isAdmin = false
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin' || user?.role === 'hr_officer'
+
+  const loadData = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const [items, balanceData, calendarData] = await Promise.all([
+        leaveService.getLeaves(),
+        leaveService.getBalances(),
+        leaveService.getCalendar().catch(() => null),
+      ])
+
+      setRequests(Array.isArray(items) ? items : [])
+      setBalances(balanceData)
+      setCalendar(calendarData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load time off data.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadData()
+  }, [])
 
   const filteredRequests = useMemo(() => {
     const query = search.toLowerCase().trim()
+    const data = requests ?? []
 
-    if (!query) return leaveRequests
+    if (!query) return data
 
-    return leaveRequests.filter((item: any) => {
+    return data.filter((item: any) => {
+      const employeeName = getDisplayName(item).toLowerCase()
       return (
-        item.leave_type?.toLowerCase().includes(query) ||
-        item.status?.toLowerCase().includes(query) ||
-        item.employee_name?.toLowerCase().includes(query) ||
-        item.employee?.toLowerCase().includes(query)
+        formatLeaveType(item.leave_type).toLowerCase().includes(query) ||
+        (item.status ?? '').toLowerCase().includes(query) ||
+        employeeName.includes(query) ||
+        (item.employee?.login_id ?? '').toLowerCase().includes(query)
       )
     })
-  }, [search])
+  }, [search, requests])
 
   const calendarDays = useMemo(() => {
     const year = new Date().getFullYear()
-
     const firstDay = new Date(year, activeMonth, 1).getDay()
     const totalDays = new Date(year, activeMonth + 1, 0).getDate()
-
     const days: Array<number | null> = []
 
     for (let i = 0; i < firstDay; i++) {
@@ -98,21 +148,21 @@ export function TimeOff() {
 
   const getLeaveForDay = (day: number) => {
     const year = new Date().getFullYear()
+    const currentDate = new Date(year, activeMonth, day)
+    const isoDate = currentDate.toISOString().slice(0, 10)
 
-    return leaveRequests.filter((item: any) => {
+    if (calendar?.marked_dates) {
+      return calendar.marked_dates.filter((item: any) => item.date === isoDate)
+    }
+
+    return requests.filter((item: any) => {
       if (!item.start_date) return false
-
       const start = new Date(item.start_date)
-      const end = item.end_date
-        ? new Date(item.end_date)
-        : new Date(item.start_date)
-
+      const end = item.end_date ? new Date(item.end_date) : new Date(item.start_date)
       const current = new Date(year, activeMonth, day)
-
       current.setHours(0, 0, 0, 0)
       start.setHours(0, 0, 0, 0)
       end.setHours(0, 0, 0, 0)
-
       return current >= start && current <= end
     })
   }
@@ -125,21 +175,60 @@ export function TimeOff() {
     setActiveMonth((current) => (current === 11 ? 0 : current + 1))
   }
 
-  const handleApprove = (id: string | number) => {
-    console.log('Approve leave request:', id)
+  const handleApprove = async (id: string | number) => {
+    try {
+      await leaveService.approveLeave(String(id))
+      await loadData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to approve leave request.')
+    }
   }
 
-  const handleReject = (id: string | number) => {
-    console.log('Reject leave request:', id)
+  const handleReject = async (id: string | number) => {
+    try {
+      await leaveService.rejectLeave(String(id), 'Rejected from dashboard')
+      await loadData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to reject leave request.')
+    }
   }
+
+  const handleCreateLeave = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!form.start_date || !form.end_date) {
+      setError('Please select both start and end dates.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+
+    try {
+      await leaveService.createLeave({
+        leave_type: form.leave_type,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        remarks: form.remarks,
+      })
+
+      setOpen(false)
+      setForm({ leave_type: 'paid', start_date: '', end_date: '', remarks: '' })
+      await loadData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to submit leave request.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const availablePaid = Number(balances?.paid?.available ?? balances?.paid?.total ?? 0)
+  const availableSick = Number(balances?.sick?.available ?? balances?.sick?.total ?? 0)
+  const usedUnpaid = Number(balances?.unpaid?.used ?? 0)
+  const upcomingHolidays = calendar?.holidays ?? staticPublicHolidays
 
   return (
     <AppLayout title="Time Off">
       <div className="space-y-6">
-        {/* ---------------------------------------------------- */}
-        {/* PAGE HEADER */}
-        {/* ---------------------------------------------------- */}
-
         <div className="section-header">
           <div>
             <div className="flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-dayflow-green">
@@ -148,7 +237,12 @@ export function TimeOff() {
             </div>
 
             <h2 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-dayflow-text">
-              Time Off
+              <span className="inline-flex items-center gap-2">
+                Time Off
+                {!isAdmin && (
+                  <span className="rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">NEW</span>
+                )}
+              </span>
             </h2>
 
             <p className="mt-1 text-sm text-dayflow-muted">
@@ -164,13 +258,14 @@ export function TimeOff() {
           </Button>
         </div>
 
-        {/* ---------------------------------------------------- */}
-        {/* ADMIN / HR VIEW */}
-        {/* ---------------------------------------------------- */}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
         {isAdmin ? (
           <div className="space-y-5">
-            {/* Top navigation tabs */}
             <Card className="overflow-hidden">
               <div className="flex items-center border-b border-dayflow-border">
                 <button
@@ -196,7 +291,6 @@ export function TimeOff() {
                 </button>
               </div>
 
-              {/* Secondary controls */}
               <div className="flex flex-col gap-4 border-b border-dayflow-border p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-2">
                   <button
@@ -208,22 +302,10 @@ export function TimeOff() {
                   >
                     All
                   </button>
-
-                  <button className="rounded-lg px-4 py-2 text-sm font-medium text-dayflow-muted hover:bg-dayflow-bg">
-                    Pending
-                  </button>
-
-                  <button className="rounded-lg px-4 py-2 text-sm font-medium text-dayflow-muted hover:bg-dayflow-bg">
-                    Approved
-                  </button>
                 </div>
 
                 <div className="relative w-full lg:w-[260px]">
-                  <Search
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-dayflow-muted"
-                  />
-
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dayflow-muted" />
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
@@ -233,298 +315,161 @@ export function TimeOff() {
                 </div>
               </div>
 
-              {/* Request table */}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-dayflow-border bg-dayflow-bg">
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        Employee
-                      </th>
-
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        Time Off Type
-                      </th>
-
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        Start Date
-                      </th>
-
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        End Date
-                      </th>
-
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        Days
-                      </th>
-
-                      <th className="px-4 py-3 text-left font-medium text-dayflow-muted">
-                        Status
-                      </th>
-
-                      <th className="px-4 py-3 text-right font-medium text-dayflow-muted">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredRequests.length > 0 ? (
-                      filteredRequests.map((item: any) => (
-                        <tr
-                          key={item.id}
-                          className="border-b border-dayflow-border last:border-0 hover:bg-dayflow-bg/60"
-                        >
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-dayflow-blueSoft text-xs font-semibold text-dayflow-blue">
-                                {(item.employee_name ||
-                                  item.employee ||
-                                  'A')[0]}
-                              </div>
-
-                              <div>
-                                <div className="font-medium text-dayflow-text">
-                                  {item.employee_name ||
-                                    item.employee ||
-                                    'Aisha Khan'}
-                                </div>
-
-                                <div className="text-xs text-dayflow-muted">
-                                  Employee
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="px-4 py-4 text-dayflow-text">
-                            {item.leave_type}
-                          </td>
-
-                          <td className="px-4 py-4 text-dayflow-muted">
-                            {item.start_date}
-                          </td>
-
-                          <td className="px-4 py-4 text-dayflow-muted">
-                            {item.end_date || item.start_date}
-                          </td>
-
-                          <td className="px-4 py-4 text-dayflow-text">
-                            {item.days || '1'} Days
-                          </td>
-
-                          <td className="px-4 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                                statusClasses[item.status]
-                              }`}
-                            >
-                              {item.status}
-                            </span>
-                          </td>
-
-                          <td className="px-4 py-4">
-                            <div className="flex justify-end gap-2">
-                              {item.status === 'pending' ? (
-                                <>
-                                  <button
-                                    onClick={() => handleReject(item.id)}
-                                    title="Reject"
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
-                                  >
-                                    <X size={15} />
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleApprove(item.id)}
-                                    title="Approve"
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-dayflow-greenSoft text-dayflow-success transition hover:opacity-80"
-                                  >
-                                    <Check size={15} />
-                                  </button>
-                                </>
-                              ) : (
-                                <span className="text-xs text-dayflow-muted">
-                                  No action
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-4 py-12 text-center text-dayflow-muted"
-                        >
-                          No time off requests found.
-                        </td>
+                {loading ? (
+                  <div className="px-4 py-10 text-center text-sm text-dayflow-muted">Loading time off requests…</div>
+                ) : (
+                  <table className="w-full min-w-[900px] border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-dayflow-border bg-dayflow-bg">
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">Employee</th>
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">Time Off Type</th>
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">Start Date</th>
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">End Date</th>
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">Days</th>
+                        <th className="px-4 py-3 text-left font-medium text-dayflow-muted">Status</th>
+                        <th className="px-4 py-3 text-right font-medium text-dayflow-muted">Action</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+
+                    <tbody>
+                      {filteredRequests.length > 0 ? (
+                        filteredRequests.map((item: any) => (
+                          <tr key={item.id} className="border-b border-dayflow-border last:border-0 hover:bg-dayflow-bg/60">
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-dayflow-blueSoft text-xs font-semibold text-dayflow-blue">
+                                  {getDisplayName(item).charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-dayflow-text">{getDisplayName(item)}</div>
+                                  <div className="text-xs text-dayflow-muted">Employee</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-dayflow-text">{formatLeaveType(item.leave_type)}</td>
+                            <td className="px-4 py-4 text-dayflow-muted">{item.start_date}</td>
+                            <td className="px-4 py-4 text-dayflow-muted">{item.end_date || item.start_date}</td>
+                            <td className="px-4 py-4 text-dayflow-text">{item.days_count ?? '1'} Days</td>
+                            <td className="px-4 py-4">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[item.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex justify-end gap-2">
+                                {item.status === 'pending' ? (
+                                  <>
+                                    <button onClick={() => void handleReject(item.id)} title="Reject" className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100">
+                                      <X size={15} />
+                                    </button>
+                                    <button onClick={() => void handleApprove(item.id)} title="Approve" className="flex h-8 w-8 items-center justify-center rounded-lg bg-dayflow-greenSoft text-dayflow-success transition hover:opacity-80">
+                                      <Check size={15} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-dayflow-muted">No action</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 text-center text-dayflow-muted">No time off requests found.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </Card>
 
-            {/* Admin allocation cards */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card className="p-5">
-                <div className="text-sm text-dayflow-muted">
-                  Paid Time Off
-                </div>
-
-                <div className="mt-2 text-3xl font-semibold text-dayflow-text">
-                  24
-                </div>
-
-                <div className="mt-1 text-xs text-dayflow-muted">
-                  Days allocated
-                </div>
+                <div className="text-sm text-dayflow-muted">Paid Time Off</div>
+                <div className="mt-2 text-3xl font-semibold text-dayflow-text">{balances?.paid?.total ?? availablePaid}</div>
+                <div className="mt-1 text-xs text-dayflow-muted">Days allocated</div>
               </Card>
 
               <Card className="p-5">
-                <div className="text-sm text-dayflow-muted">
-                  Sick Leave
-                </div>
-
-                <div className="mt-2 text-3xl font-semibold text-dayflow-text">
-                  12
-                </div>
-
-                <div className="mt-1 text-xs text-dayflow-muted">
-                  Days allocated
-                </div>
+                <div className="text-sm text-dayflow-muted">Sick Leave</div>
+                <div className="mt-2 text-3xl font-semibold text-dayflow-text">{balances?.sick?.total ?? availableSick}</div>
+                <div className="mt-1 text-xs text-dayflow-muted">Days allocated</div>
               </Card>
 
               <Card className="p-5">
-                <div className="text-sm text-dayflow-muted">
-                  Unpaid Leave
-                </div>
-
-                <div className="mt-2 text-3xl font-semibold text-dayflow-text">
-                  Unlimited
-                </div>
-
-                <div className="mt-1 text-xs text-dayflow-muted">
-                  Based on company policy
-                </div>
+                <div className="text-sm text-dayflow-muted">Unpaid Leave</div>
+                <div className="mt-2 text-3xl font-semibold text-dayflow-text">{usedUnpaid > 0 ? usedUnpaid : 'Unlimited'}</div>
+                <div className="mt-1 text-xs text-dayflow-muted">Based on company policy</div>
               </Card>
             </div>
           </div>
         ) : (
-          /* ---------------------------------------------------- */
-          /* EMPLOYEE VIEW */
-          /* ---------------------------------------------------- */
-
           <div className="space-y-5">
-            {/* Leave balance */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Card className="relative overflow-hidden p-5">
                 <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-dayflow-greenSoft opacity-70" />
-
                 <div className="relative">
                   <div className="flex items-center gap-2 text-sm text-dayflow-muted">
                     <Clock3 size={15} />
                     Paid Time Off
                   </div>
-
-                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">
-                    12
-                  </div>
-
-                  <div className="mt-1 text-xs text-dayflow-muted">
-                    Days available
-                  </div>
+                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">{availablePaid}</div>
+                  <div className="mt-1 text-xs text-dayflow-muted">Days available</div>
                 </div>
               </Card>
 
               <Card className="relative overflow-hidden p-5">
                 <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-dayflow-blueSoft opacity-70" />
-
                 <div className="relative">
                   <div className="flex items-center gap-2 text-sm text-dayflow-muted">
                     <Clock3 size={15} />
                     Sick Leave
                   </div>
-
-                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">
-                    8
-                  </div>
-
-                  <div className="mt-1 text-xs text-dayflow-muted">
-                    Days available
-                  </div>
+                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">{availableSick}</div>
+                  <div className="mt-1 text-xs text-dayflow-muted">Days available</div>
                 </div>
               </Card>
 
               <Card className="relative overflow-hidden p-5">
                 <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-amber-50 opacity-70" />
-
                 <div className="relative">
                   <div className="flex items-center gap-2 text-sm text-dayflow-muted">
                     <Clock3 size={15} />
                     Unpaid Leave
                   </div>
-
-                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">
-                    2
-                  </div>
-
-                  <div className="mt-1 text-xs text-dayflow-muted">
-                    Days used
-                  </div>
+                  <div className="mt-3 text-3xl font-semibold text-dayflow-text">{usedUnpaid}</div>
+                  <div className="mt-1 text-xs text-dayflow-muted">Days used</div>
                 </div>
               </Card>
             </div>
 
-            {/* Calendar + side panel */}
             <div className="grid gap-5 xl:grid-cols-[1.55fr_0.65fr]">
               <Card className="overflow-hidden">
-                {/* Calendar header */}
                 <div className="flex flex-col gap-4 border-b border-dayflow-border p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-sm text-dayflow-muted">
-                      Your Time Off
-                    </div>
-
-                    <h3 className="mt-1 text-xl font-semibold text-dayflow-text">
-                      {months[activeMonth]}
-                    </h3>
+                    <div className="text-sm text-dayflow-muted">Your Time Off</div>
+                    <h3 className="mt-1 text-xl font-semibold text-dayflow-text">{months[activeMonth]}</h3>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handlePreviousMonth}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-dayflow-border bg-white text-dayflow-muted transition hover:bg-dayflow-bg hover:text-dayflow-text"
-                    >
+                    <button onClick={handlePreviousMonth} className="flex h-9 w-9 items-center justify-center rounded-lg border border-dayflow-border bg-white text-dayflow-muted transition hover:bg-dayflow-bg hover:text-dayflow-text">
                       <ChevronLeft size={17} />
                     </button>
-
-                    <button
-                      onClick={() => setActiveMonth(new Date().getMonth())}
-                      className="rounded-lg border border-dayflow-border bg-white px-3 py-2 text-xs font-medium text-dayflow-text transition hover:bg-dayflow-bg"
-                    >
+                    <button onClick={() => setActiveMonth(new Date().getMonth())} className="rounded-lg border border-dayflow-border bg-white px-3 py-2 text-xs font-medium text-dayflow-text transition hover:bg-dayflow-bg">
                       Today
                     </button>
-
-                    <button
-                      onClick={handleNextMonth}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-dayflow-border bg-white text-dayflow-muted transition hover:bg-dayflow-bg hover:text-dayflow-text"
-                    >
+                    <button onClick={handleNextMonth} className="flex h-9 w-9 items-center justify-center rounded-lg border border-dayflow-border bg-white text-dayflow-muted transition hover:bg-dayflow-bg hover:text-dayflow-text">
                       <ChevronRight size={17} />
                     </button>
                   </div>
                 </div>
 
-                {/* Calendar */}
                 <div className="p-4 sm:p-5">
                   <div className="grid grid-cols-7 border-l border-t border-dayflow-border">
                     {weekdays.map((day) => (
-                      <div
-                        key={day}
-                        className="border-b border-r border-dayflow-border bg-dayflow-bg px-2 py-3 text-center text-xs font-semibold text-dayflow-muted"
-                      >
+                      <div key={day} className="border-b border-r border-dayflow-border bg-dayflow-bg px-2 py-3 text-center text-xs font-semibold text-dayflow-muted">
                         {day}
                       </div>
                     ))}
@@ -533,35 +478,22 @@ export function TimeOff() {
                       const dayLeaves = day ? getLeaveForDay(day) : []
 
                       return (
-                        <div
-                          key={`${day}-${index}`}
-                          className={`min-h-[90px] border-b border-r border-dayflow-border p-2 ${
-                            !day ? 'bg-dayflow-bg/50' : 'bg-white'
-                          }`}
-                        >
+                        <div key={`${day}-${index}`} className={`min-h-[90px] border-b border-r border-dayflow-border p-2 ${!day ? 'bg-dayflow-bg/50' : 'bg-white'}`}>
                           {day && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-dayflow-text">
-                                  {day}
-                                </span>
-
-                                {dayLeaves.length > 0 && (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-dayflow-green" />
-                                )}
+                                <span className="text-xs font-medium text-dayflow-text">{day}</span>
+                                {dayLeaves.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-dayflow-green" />}
                               </div>
 
                               <div className="mt-2 space-y-1">
                                 {dayLeaves.slice(0, 2).map((item: any) => (
                                   <div
-                                    key={`${item.id}-${day}`}
-                                    className={`truncate rounded-md px-1.5 py-1 text-[10px] font-medium ${
-                                      leaveTypeClasses[item.leave_type] ||
-                                      'bg-dayflow-blueSoft text-dayflow-blue'
-                                    }`}
-                                    title={item.leave_type}
+                                    key={`${item.id ?? item.request_id ?? item.date}-${day}`}
+                                    className={`truncate rounded-md px-1.5 py-1 text-[10px] font-medium ${leaveTypeClasses[item.leave_type] ?? 'bg-dayflow-blueSoft text-dayflow-blue'}`}
+                                    title={formatLeaveType(item.leave_type)}
                                   >
-                                    {item.leave_type}
+                                    {formatLeaveType(item.leave_type)}
                                   </div>
                                 ))}
                               </div>
@@ -573,121 +505,65 @@ export function TimeOff() {
                   </div>
                 </div>
 
-                {/* Legend */}
                 <div className="flex flex-wrap gap-4 border-t border-dayflow-border px-5 py-4">
-                  <div className="flex items-center gap-2 text-xs text-dayflow-muted">
-                    <span className="h-2.5 w-2.5 rounded-full bg-dayflow-blue" />
-                    Paid Time Off
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-dayflow-muted">
-                    <span className="h-2.5 w-2.5 rounded-full bg-dayflow-warning" />
-                    Sick Leave
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-dayflow-muted">
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                    Unpaid Leave
-                  </div>
+                  <div className="flex items-center gap-2 text-xs text-dayflow-muted"><span className="h-2.5 w-2.5 rounded-full bg-dayflow-blue" />Paid Time Off</div>
+                  <div className="flex items-center gap-2 text-xs text-dayflow-muted"><span className="h-2.5 w-2.5 rounded-full bg-dayflow-warning" />Sick Leave</div>
+                  <div className="flex items-center gap-2 text-xs text-dayflow-muted"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Unpaid Leave</div>
                 </div>
               </Card>
 
-              {/* Right panel */}
               <div className="space-y-5">
-                {/* Time off types */}
                 <Card className="p-5">
                   <div className="mb-4">
-                    <h3 className="font-semibold text-dayflow-text">
-                      Time Off Types
-                    </h3>
-
-                    <p className="mt-1 text-xs text-dayflow-muted">
-                      Available leave categories
-                    </p>
+                    <h3 className="font-semibold text-dayflow-text">Time Off Types</h3>
+                    <p className="mt-1 text-xs text-dayflow-muted">Available leave categories</p>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between rounded-xl border border-dayflow-border bg-dayflow-bg p-3">
                       <div className="flex items-center gap-3">
                         <span className="h-2.5 w-2.5 rounded-full bg-dayflow-blue" />
-                        <span className="text-sm text-dayflow-text">
-                          Paid Time Off
-                        </span>
+                        <span className="text-sm text-dayflow-text">Paid Time Off</span>
                       </div>
-
-                      <span className="text-sm font-semibold text-dayflow-text">
-                        12
-                      </span>
+                      <span className="text-sm font-semibold text-dayflow-text">{availablePaid}</span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-xl border border-dayflow-border bg-dayflow-bg p-3">
                       <div className="flex items-center gap-3">
                         <span className="h-2.5 w-2.5 rounded-full bg-dayflow-warning" />
-                        <span className="text-sm text-dayflow-text">
-                          Sick Leave
-                        </span>
+                        <span className="text-sm text-dayflow-text">Sick Leave</span>
                       </div>
-
-                      <span className="text-sm font-semibold text-dayflow-text">
-                        8
-                      </span>
+                      <span className="text-sm font-semibold text-dayflow-text">{availableSick}</span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-xl border border-dayflow-border bg-dayflow-bg p-3">
                       <div className="flex items-center gap-3">
                         <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                        <span className="text-sm text-dayflow-text">
-                          Unpaid Leave
-                        </span>
+                        <span className="text-sm text-dayflow-text">Unpaid Leave</span>
                       </div>
-
-                      <span className="text-sm font-semibold text-dayflow-text">
-                        2
-                      </span>
+                      <span className="text-sm font-semibold text-dayflow-text">{usedUnpaid}</span>
                     </div>
                   </div>
                 </Card>
 
-                {/* Upcoming requests */}
                 <Card className="p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-dayflow-text">
-                        My Requests
-                      </h3>
-
-                      <p className="mt-1 text-xs text-dayflow-muted">
-                        Recent time off requests
-                      </p>
+                      <h3 className="font-semibold text-dayflow-text">My Requests</h3>
+                      <p className="mt-1 text-xs text-dayflow-muted">Recent time off requests</p>
                     </div>
-
                     <FileText size={18} className="text-dayflow-muted" />
                   </div>
 
                   <div className="space-y-3">
-                    {leaveRequests.slice(0, 4).map((item: any) => (
-                      <div
-                        key={item.id}
-                        className="rounded-xl border border-dayflow-border bg-dayflow-bg p-3"
-                      >
+                    {(requests ?? []).slice(0, 4).map((item: any) => (
+                      <div key={item.id} className="rounded-xl border border-dayflow-border bg-dayflow-bg p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-sm font-medium text-dayflow-text">
-                              {item.leave_type}
-                            </div>
-
-                            <div className="mt-1 text-xs text-dayflow-muted">
-                              {item.start_date}
-                              {item.end_date &&
-                                ` — ${item.end_date}`}
-                            </div>
+                            <div className="text-sm font-medium text-dayflow-text">{formatLeaveType(item.leave_type)}</div>
+                            <div className="mt-1 text-xs text-dayflow-muted">{item.start_date}{item.end_date && ` — ${item.end_date}`}</div>
                           </div>
-
-                          <span
-                            className={`rounded-full px-2 py-1 text-[10px] font-medium ${
-                              statusClasses[item.status]
-                            }`}
-                          >
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${statusClasses[item.status] ?? 'bg-slate-100 text-slate-600'}`}>
                             {item.status}
                           </span>
                         </div>
@@ -696,37 +572,20 @@ export function TimeOff() {
                   </div>
                 </Card>
 
-                {/* Public holidays */}
                 <Card className="p-5">
                   <div className="mb-4">
-                    <h3 className="font-semibold text-dayflow-text">
-                      Public Holidays
-                    </h3>
-
-                    <p className="mt-1 text-xs text-dayflow-muted">
-                      Upcoming company holidays
-                    </p>
+                    <h3 className="font-semibold text-dayflow-text">Public Holidays</h3>
+                    <p className="mt-1 text-xs text-dayflow-muted">Upcoming company holidays</p>
                   </div>
 
                   <div className="space-y-3">
-                    {publicHolidays.slice(0, 4).map((holiday) => (
-                      <div
-                        key={holiday.id}
-                        className="flex items-center justify-between border-b border-dayflow-border pb-3 last:border-0 last:pb-0"
-                      >
+                    {(upcomingHolidays ?? []).slice(0, 4).map((holiday: any) => (
+                      <div key={holiday.id ?? holiday.name} className="flex items-center justify-between border-b border-dayflow-border pb-3 last:border-0 last:pb-0">
                         <div>
-                          <div className="text-sm font-medium text-dayflow-text">
-                            {holiday.name}
-                          </div>
-
-                          <div className="mt-1 text-xs text-dayflow-muted">
-                            {holiday.date}
-                          </div>
+                          <div className="text-sm font-medium text-dayflow-text">{holiday.name}</div>
+                          <div className="mt-1 text-xs text-dayflow-muted">{holiday.date}</div>
                         </div>
-
-                        <div className="rounded-full bg-dayflow-blueSoft px-2 py-1 text-[10px] font-medium text-dayflow-blue">
-                          Holiday
-                        </div>
+                        <div className="rounded-full bg-dayflow-blueSoft px-2 py-1 text-[10px] font-medium text-dayflow-blue">Holiday</div>
                       </div>
                     ))}
                   </div>
@@ -737,136 +596,91 @@ export function TimeOff() {
         )}
       </div>
 
-      {/* ---------------------------------------------------- */}
-      {/* NEW TIME OFF MODAL */}
-      {/* ---------------------------------------------------- */}
-
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Create Time Off Request"
-      >
-        <form className="space-y-5">
-          {/* Employee */}
+      <Modal open={open} onClose={() => setOpen(false)} title="Create Time Off Request">
+        <form onSubmit={handleCreateLeave} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-                Employee
-              </label>
-
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">Employee</label>
               <div className="flex h-11 items-center rounded-xl border border-dayflow-border bg-dayflow-bg px-3 text-sm text-dayflow-text">
-                Aisha Khan
+                {user?.name ?? 'Employee'}
               </div>
             </div>
 
-            {/* Leave type */}
             <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-                Time Off Type
-              </label>
-
-              <select className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm text-dayflow-text outline-none focus:border-dayflow-green">
-                <option>Paid Time Off</option>
-                <option>Sick Leave</option>
-                <option>Unpaid Leave</option>
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">Time Off Type</label>
+              <select
+                value={form.leave_type}
+                onChange={(event) => setForm((current) => ({ ...current, leave_type: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm text-dayflow-text outline-none focus:border-dayflow-green"
+              >
+                <option value="paid">Paid Time Off</option>
+                <option value="sick">Sick Leave</option>
+                <option value="unpaid">Unpaid Leave</option>
               </select>
             </div>
           </div>
 
-          {/* Dates */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-                Start Date
-              </label>
-
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">Start Date</label>
               <input
-                className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm outline-none focus:border-dayflow-green"
                 type="date"
+                value={form.start_date}
+                onChange={(event) => setForm((current) => ({ ...current, start_date: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm outline-none focus:border-dayflow-green"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-                End Date
-              </label>
-
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">End Date</label>
               <input
-                className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm outline-none focus:border-dayflow-green"
                 type="date"
+                value={form.end_date}
+                onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-dayflow-border bg-white px-3 text-sm outline-none focus:border-dayflow-green"
               />
             </div>
           </div>
 
-          {/* Allocation */}
           <div className="rounded-xl border border-dayflow-border bg-dayflow-bg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-dayflow-muted">
-                Available allocation
-              </span>
-
-              <span className="text-sm font-semibold text-dayflow-text">
-                12 Days
-              </span>
+              <span className="text-sm text-dayflow-muted">Available allocation</span>
+              <span className="text-sm font-semibold text-dayflow-text">{availablePaid} Days</span>
             </div>
           </div>
 
-          {/* Remarks */}
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-              Remarks
-            </label>
-
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">Remarks</label>
             <textarea
+              value={form.remarks}
+              onChange={(event) => setForm((current) => ({ ...current, remarks: event.target.value }))}
               className="min-h-[100px] w-full rounded-xl border border-dayflow-border bg-white px-3 py-2 text-sm outline-none focus:border-dayflow-green"
               placeholder="Add a reason or additional information..."
             />
           </div>
 
-          {/* Attachment */}
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">
-              Attachment
-            </label>
-
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-dayflow-muted">Attachment</label>
             <div className="flex items-center justify-between rounded-xl border border-dashed border-dayflow-border bg-dayflow-bg p-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-dayflow-blueSoft text-dayflow-blue">
                   <FileText size={17} />
                 </div>
-
                 <div>
-                  <div className="text-sm font-medium text-dayflow-text">
-                    certificate.pdf
-                  </div>
-
-                  <div className="text-xs text-dayflow-muted">
-                    PDF document
-                  </div>
+                  <div className="text-sm font-medium text-dayflow-text">certificate.pdf</div>
+                  <div className="text-xs text-dayflow-muted">PDF document</div>
                 </div>
               </div>
-
-              <button
-                type="button"
-                className="text-xs font-medium text-red-500 hover:text-red-600"
-              >
-                Remove
-              </button>
+              <button type="button" className="text-xs font-medium text-red-500 hover:text-red-600">Remove</button>
             </div>
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-3 border-t border-dayflow-border pt-4">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="secondary" type="button" onClick={() => setOpen(false)}>
               Discard
             </Button>
-
-            <Button type="submit">
-              Submit Request
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Request'}
             </Button>
           </div>
         </form>

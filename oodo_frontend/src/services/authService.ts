@@ -63,4 +63,20 @@ export const authService = {
       throw new Error(handleApiError(error, 'Unable to log out'))
     }
   }
+  ,
+
+  changePassword: async (currentPassword: string, newPassword: string, confirmPassword: string) => {
+    if (USE_MOCK_DATA) return { success: true }
+    try {
+      const payload = {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }
+      const { data } = await api.post('/change-password/', payload)
+      return data?.data ?? data
+    } catch (error) {
+      throw new Error(handleApiError(error, 'Unable to change password'))
+    }
+  }
 }

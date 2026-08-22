@@ -32,7 +32,12 @@ export function SignIn() {
       const result = await authService.login(values.email, values.password)
       login({ user: result.user, token: result.token, refreshToken: result.refreshToken })
       showToast('Signed in successfully', 'success')
-      navigate('/dashboard')
+      // If backend indicates user must change password, send them to change-password
+      if (result.user && (result.user.change_password === true || result.user.change_password === 'true')) {
+        navigate('/change-password')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid credentials')
     }
