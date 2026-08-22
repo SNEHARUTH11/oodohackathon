@@ -17,11 +17,25 @@ from api.admin.views.settings import (
 from api.admin.views.timeoff import (
     allocation_list, allocation_update, approve, reject, request_list as tof_request_list,
 )
+from api.admin.views.payroll import (
+    list as pr_list, payslip_download, payslip_generate, payslip_regenerate,
+    payslip_send, payslip_view, structure_update, structure_view,
+)
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
 
 urlpatterns = [
+    # ── Payroll ───────────────────────────────────────────────────────
+    path("payroll/list/", pr_list.PayrollListView.as_view(), name="payroll-list"),
+    path("payroll/salary-structure/view/<uuid:employee_id>/", structure_view.SalaryStructureView.as_view(), name="payroll-structure-view"),
+    path("payroll/salary-structure/update/<uuid:employee_id>/", structure_update.SalaryStructureUpdateView.as_view(), name="payroll-structure-update"),
+    path("payroll/payslip/generate/", payslip_generate.PayslipGenerateView.as_view(), name="payslip-generate"),
+    path("payroll/payslip/view/<uuid:payslip_id>/", payslip_view.PayslipDetailView.as_view(), name="payslip-view"),
+    path("payroll/payslip/regenerate/<uuid:payslip_id>/", payslip_regenerate.PayslipRegenerateView.as_view(), name="payslip-regenerate"),
+    path("payroll/payslip/send/", payslip_send.PayslipSendView.as_view(), name="payslip-send"),
+    path("payroll/payslip/download/<uuid:payslip_id>/", payslip_download.PayslipDownloadView.as_view(), name="payslip-download"),
+
     # ── Time Off ──────────────────────────────────────────────────────
     path("timeoff/request/list/", tof_request_list.AdminTimeOffRequestListView.as_view(), name="timeoff-request-list"),
     path("timeoff/request/approve/<uuid:request_id>/", approve.TimeOffApproveView.as_view(), name="timeoff-approve"),

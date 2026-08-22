@@ -13,9 +13,15 @@ from api.employee.views.skill import skill_create, skill_delete, skill_list
 from api.employee.views.timeoff import (
     balance_view, calendar, request_cancel, request_create, request_list,
 )
+from api.employee.views.payroll import payslip_download, payslip_list, payslip_view
 app_name = "employee"
 
 urlpatterns = [
+    # ── Payroll (read-only) ───────────────────────────────────────────
+    path("payroll/payslip/list/", payslip_list.MyPayslipListView.as_view(), name="my-payslip-list"),
+    path("payroll/payslip/view/<uuid:payslip_id>/", payslip_view.MyPayslipDetailView.as_view(), name="my-payslip-view"),
+    path("payroll/payslip/download/<uuid:payslip_id>/", payslip_download.MyPayslipDownloadView.as_view(), name="my-payslip-download"),
+
     # ── Time Off ──────────────────────────────────────────────────────
     path("timeoff/calendar/", calendar.TimeOffCalendarView.as_view(), name="timeoff-calendar"),
     path("timeoff/balance/view/", balance_view.TimeOffBalanceView.as_view(), name="timeoff-balance"),
