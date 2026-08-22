@@ -23,3 +23,23 @@ def send_email(subject, message, recipient_list, html_message=None, attachments=
     except Exception as exc:
         logger.error(f"Email send failed to {recipient_list}: {exc}")
         return False
+    
+# ── In-app notifications (created alongside emails; never raises) ────────────
+
+def notify(recipient, ntype, title, message, data=None):
+    from apps.notifications.models import Notification
+    try:
+        Notification.objects.create(recipient=recipient, type=ntype, title=title,
+                                    message=message, data=data or {})
+        return True
+    except Exception as exc:
+        logger.error(f"Notification create failed for {recipient}: {exc}")
+        return False
+
+
+def notify_admins(ntype, title, message, data=None):
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    for admin in User.objects.filter(is_active=True, is_superuser=False,
+                                     role__in=["admin", "hr_officer"]):
+        notify(admin, ntype, title, message, data)

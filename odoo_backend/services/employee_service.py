@@ -9,7 +9,9 @@ from rest_framework.exceptions import ValidationError
 
 from apps.company.models import Company
 from apps.employees.models import BankDetail, Certification, Document, Skill
-from services.notification_service import send_email
+from oodohackathon.odoo_backend.api import employee
+from oodohackathon.odoo_backend.apps.employees.serializers import employee
+from services.notification_service import notify, send_email
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -38,6 +40,33 @@ def generate_login_id(company, full_name, joining_year):
 
 
 class EmployeeService:
+    def reset_password(self, actor, employee, new_password=None):
+        """Admin resets an employee's password. Forces change on next login,
+        kills their sessions, emails them. Password returned ONCE in response."""
+        if employee.id == actor.id:
+            raise ValidationError({"detail": "Use change-password for your own account."})
+        temp_password = new_password or settings.DEMO_TEMP_PASSWORD or get_random_string(12)
+        employee.set_password(temp_password)
+        employee.must_change_password = True
+        employee.save(update_fields=["password", "must_change_password"])
+
+        from services.auth_service import auth_service
+        auth_service._blacklist_all_sessions(employee)   # log out everywhere
+
+        send_email(
+            subject="Your Dayflow password was reset",
+            message=(f"Hi {employee.first_name},\n\nYour password was reset by "
+                     f"{actor.full_name}.\nTemporary password: {temp_password}\n"
+                     f"You will be asked to change it on next sign-in."),
+            recipient_list=[employee.email],
+        )
+        from services.notification_service import notify
+        notify(employee, "account", "Password reset",
+               "Your password was reset by HR. Check your email for the temporary password.")
+        logger.info(f"Password reset for {employee.login_id} by {actor.login_id}")
+        return {"id": str(employee.id), "login_id": employee.login_id,
+                "name": employee.full_name, "temp_password": temp_password,
+                "must_change_password": True}
 
     # ── creation ─────────────────────────────────────────────────────────
     def create_employee(self, actor, data):
@@ -48,7 +77,7 @@ class EmployeeService:
         company = actor.company or Company.objects.first()
         joining = data.get("date_of_joining") or date.today()
         full_name = f"{data['first_name']} {data['last_name']}".strip()
-        temp_password = get_random_string(12)
+        temp_password = settings.DEMO_TEMP_PASSWORD or get_random_string(12)
 
         user = User.objects.create_user(
             email=email,
@@ -78,6 +107,9 @@ class EmployeeService:
             ),
             recipient_list=[user.email],
         )
+        notify(user, "account", "Welcome to Dayflow",
+               f"Your account is ready. Login ID: {user.login_id}. "
+               f"Check your email for the temporary password.")
         logger.info(f"Employee created: {user.login_id} (by {actor.login_id})")
         payload = self.detail_payload(user)
         payload["temp_password"] = temp_password  # returned ONCE — never stored

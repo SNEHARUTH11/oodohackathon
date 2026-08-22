@@ -4,7 +4,6 @@ from pathlib import Path
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, []),
@@ -37,6 +36,7 @@ LOCAL_APPS = [
     "apps.attendance",
     "apps.leaves",
     "apps.payroll",
+    "apps.notifications",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -140,3 +140,4 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+DEMO_TEMP_PASSWORD = env("DEMO_TEMP_PASSWORD", default="")

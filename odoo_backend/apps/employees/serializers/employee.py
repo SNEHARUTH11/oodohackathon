@@ -35,3 +35,14 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
             "nationality", "personal_email", "residing_address",
             "about", "what_i_love_about_job", "interests_hobbies",
         )
+
+class AdminPasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(required=False, allow_blank=True, default="",
+                                         help_text="Optional admin-chosen password. "
+                                                   "Empty → system generates one.")
+
+    def validate_new_password(self, value):
+        if value:
+            from common.validators import validate_password_policy
+            validate_password_policy(value)
+        return value

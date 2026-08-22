@@ -22,6 +22,7 @@ from api.admin.views.payroll import (
     payslip_send, payslip_view, structure_update, structure_view,
 )
 from api.admin.views.dashboard import overview as adm_dash
+from oodohackathon.odoo_backend.api.admin.views.employees import password_reset
 # NOTE: app_name is "adminpanel", NOT "admin" — Django's built-in admin site
 # already claims the "admin" namespace and a duplicate raises ImproperlyConfigured.
 app_name = "adminpanel"
@@ -63,6 +64,7 @@ urlpatterns = [
     path("attendance/update/<uuid:attendance_id>/", att_update.AdminAttendanceUpdateView.as_view(), name="attendance-update"),
 
     # ── Employees ─────────────────────────────────────────────────────
+    path("employees/reset-password/<uuid:employee_id>/", password_reset.EmployeePasswordResetView.as_view(), name="employee-password-reset"),
     path("employees/create/", employee_create.EmployeeCreateView.as_view(), name="employee-create"),
     path("employees/list/", employee_list.EmployeeListView.as_view(), name="employee-list"),
     path("employees/view/<uuid:employee_id>/", employee_view.EmployeeDetailView.as_view(), name="employee-detail"),
